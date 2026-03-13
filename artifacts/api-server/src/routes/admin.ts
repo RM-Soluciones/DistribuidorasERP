@@ -1,6 +1,11 @@
 import { Router } from "express";
-import { db, usersTable, ordersTable, productsTable, orderItemsTable } from "@workspace/db";
+import { db, usersTable, ordersTable, productsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
+import { createHash } from "crypto";
+
+function hashPassword(p: string): string {
+  return createHash("sha256").update(p + "dist_salt_2024").digest("hex");
+}
 
 const router = Router();
 
@@ -11,6 +16,46 @@ async function requireAdmin(req: any, res: any): Promise<boolean> {
   if (!user || user.role !== "admin") { res.status(403).json({ error: "Admin only" }); return false; }
   return true;
 }
+
+router.post("/users", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  const { name, email, password, phone, address } = req.body;
+  if (!name || !email || !password) {
+    res.status(400).json({ error: "Name, email and password are required" }); return;
+  }
+  const existing = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+  if (existing.length > 0) {
+    res.status(400).json({ error: "Email already registered" }); return;
+  }
+  const [user] = await db.insert(usersTable).values({
+    name,
+    email,
+    passwordHash: hashPassword(password),
+    role: "admin",
+    phone: phone || null,
+    address: address || null,
+  }).returning();
+  res.status(201).json({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    phone: user.phone,
+    address: user.address,
+    createdAt: user.createdAt.toISOString(),
+  });
+});
+
+router.delete("/users/:id", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  const id = parseInt(req.params.id);
+  const currentUserId = (req.session as any).userId;
+  if (id === currentUserId) {
+    res.status(400).json({ error: "Cannot delete your own account" }); return;
+  }
+  await db.delete(usersTable).where(eq(usersTable.id, id));
+  res.json({ message: "User deleted" });
+});
 
 router.get("/users", async (req, res) => {
   if (!(await requireAdmin(req, res))) return;

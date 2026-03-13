@@ -164,6 +164,14 @@ export interface OrdersResponse {
   limit: number;
 }
 
+export interface CreateAdminUserRequest {
+  name: string;
+  email: string;
+  password: string;
+  phone?: string;
+  address?: string;
+}
+
 export interface UsersResponse {
   users: User[];
   total: number;

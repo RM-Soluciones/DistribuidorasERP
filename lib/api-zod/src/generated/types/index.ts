@@ -9,6 +9,7 @@
 export * from "./adminStats";
 export * from "./authResponse";
 export * from "./category";
+export * from "./createAdminUserRequest";
 export * from "./createCategoryRequest";
 export * from "./createOrderRequest";
 export * from "./createOrderRequestItemsItem";

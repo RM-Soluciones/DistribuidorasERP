@@ -404,6 +404,28 @@ export const GetUsersResponse = zod.object({
 });
 
 /**
+ * @summary Create an admin user (admin only)
+ */
+export const CreateAdminUserBody = zod.object({
+  name: zod.string(),
+  email: zod.string(),
+  password: zod.string(),
+  phone: zod.string().optional(),
+  address: zod.string().optional(),
+});
+
+/**
+ * @summary Delete a user (admin only)
+ */
+export const DeleteAdminUserParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteAdminUserResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
  * @summary Get admin dashboard stats
  */
 export const GetAdminStatsResponse = zod.object({

@@ -20,6 +20,7 @@ import type {
   AdminStats,
   AuthResponse,
   Category,
+  CreateAdminUserRequest,
   CreateCategoryRequest,
   CreateOrderRequest,
   CreateProductRequest,
@@ -1655,6 +1656,176 @@ export function useGetUsers<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Create an admin user (admin only)
+ */
+export const getCreateAdminUserUrl = () => {
+  return `/api/admin/users`;
+};
+
+export const createAdminUser = async (
+  createAdminUserRequest: CreateAdminUserRequest,
+  options?: RequestInit,
+): Promise<User> => {
+  return customFetch<User>(getCreateAdminUserUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createAdminUserRequest),
+  });
+};
+
+export const getCreateAdminUserMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAdminUser>>,
+    TError,
+    { data: BodyType<CreateAdminUserRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createAdminUser>>,
+  TError,
+  { data: BodyType<CreateAdminUserRequest> },
+  TContext
+> => {
+  const mutationKey = ["createAdminUser"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createAdminUser>>,
+    { data: BodyType<CreateAdminUserRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createAdminUser(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateAdminUserMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createAdminUser>>
+>;
+export type CreateAdminUserMutationBody = BodyType<CreateAdminUserRequest>;
+export type CreateAdminUserMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create an admin user (admin only)
+ */
+export const useCreateAdminUser = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAdminUser>>,
+    TError,
+    { data: BodyType<CreateAdminUserRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createAdminUser>>,
+  TError,
+  { data: BodyType<CreateAdminUserRequest> },
+  TContext
+> => {
+  return useMutation(getCreateAdminUserMutationOptions(options));
+};
+
+/**
+ * @summary Delete a user (admin only)
+ */
+export const getDeleteAdminUserUrl = (id: number) => {
+  return `/api/admin/users/${id}`;
+};
+
+export const deleteAdminUser = async (
+  id: number,
+  options?: RequestInit,
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(getDeleteAdminUserUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteAdminUserMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAdminUser>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteAdminUser>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteAdminUser"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteAdminUser>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteAdminUser(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteAdminUserMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteAdminUser>>
+>;
+
+export type DeleteAdminUserMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a user (admin only)
+ */
+export const useDeleteAdminUser = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAdminUser>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteAdminUser>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteAdminUserMutationOptions(options));
+};
 
 /**
  * @summary Get admin dashboard stats
