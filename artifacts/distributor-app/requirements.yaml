@@ -1,0 +1,20 @@
+packages:
+  "framer-motion": "For smooth page transitions and premium micro-interactions"
+  "recharts": "For the admin dashboard analytics charts"
+  "zustand": "For elegant, boilerplate-free cart state management"
+  "date-fns": "For formatting order dates and timestamps professionally"
+  "react-hook-form": "For robust form state management"
+  "@hookform/resolvers": "For Zod validation integration with forms"
+
+images:
+  - path: "artifacts/distributor-app/public/images/hero-logistics.png"
+    description: "A clean, modern, abstract representation of supply chain and distribution. Deep blues and slate grays, minimal geometric shapes, subtle glowing nodes representing connection points. Corporate, trustworthy, premium feel. 3D render style, clean lighting."
+    aspect_ratio: "16:9"
+  - path: "artifacts/distributor-app/public/images/logo-mark.png"
+    description: "A sleek, minimal corporate logo mark for a distributor. Geometric D shape intersecting with a box or arrow. Deep navy blue and bright azure blue on a completely transparent background."
+    aspect_ratio: "1:1"
+
+notes:
+  - Using generated hooks from @workspace/api-client-react for all API interactions
+  - Zustand used for global cart state to persist between page navigations
+  - Assuming standard shadcn components are available in @/components/ui/
