@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { ShoppingCart, Eye } from "lucide-react";
+import { ShoppingCart, Eye, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Product } from "@workspace/api-client-react";
 import { useCart } from "@/hooks/use-cart";
