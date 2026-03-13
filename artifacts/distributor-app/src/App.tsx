@@ -4,59 +4,47 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 
-// Public Pages
 import Home from "./pages/public/Home";
 import Products from "./pages/public/Products";
 import ProductDetail from "./pages/public/ProductDetail";
 import Cart from "./pages/public/Cart";
 
-// Auth Pages
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 
-// Customer Pages
 import CustomerDashboard from "./pages/customer/Dashboard";
 
-// Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminProducts from "./pages/admin/Products";
 import AdminOrders from "./pages/admin/Orders";
 import AdminCategories from "./pages/admin/Categories";
 import AdminUsers from "./pages/admin/Users";
+import AdminDiscounts from "./pages/admin/Discounts";
+import AdminPOS from "./pages/admin/POS";
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
+    queries: { retry: 1, refetchOnWindowFocus: false },
   },
 });
 
 function Router() {
   return (
     <Switch>
-      {/* Public Routes */}
       <Route path="/" component={Home} />
       <Route path="/products" component={Products} />
       <Route path="/products/:id" component={ProductDetail} />
       <Route path="/customer/cart" component={Cart} />
-      
-      {/* Auth Routes */}
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
-      
-      {/* Customer Routes */}
       <Route path="/customer/dashboard" component={CustomerDashboard} />
-      
-      {/* Admin Routes */}
       <Route path="/admin" component={AdminDashboard} />
+      <Route path="/admin/pos" component={AdminPOS} />
       <Route path="/admin/products" component={AdminProducts} />
       <Route path="/admin/orders" component={AdminOrders} />
       <Route path="/admin/categories" component={AdminCategories} />
+      <Route path="/admin/discounts" component={AdminDiscounts} />
       <Route path="/admin/users" component={AdminUsers} />
-
-      {/* 404 */}
       <Route component={NotFound} />
     </Switch>
   );

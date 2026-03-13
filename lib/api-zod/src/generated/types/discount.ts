@@ -5,17 +5,17 @@
  * Distribuidora API
  * OpenAPI spec version: 0.1.0
  */
+import type { DiscountType } from "./discountType";
 
-export interface Product {
+export interface Discount {
   id: number;
+  code: string;
   name: string;
-  description?: string | null;
-  price: number;
-  stock: number;
-  sku?: string | null;
-  imageUrl?: string | null;
-  categoryId?: number | null;
-  categoryName?: string | null;
+  type: DiscountType;
+  value: number;
+  minOrderAmount?: number | null;
+  maxUses?: number | null;
+  usedCount: number;
   isActive: boolean;
   expiresAt?: string | null;
   createdAt: string;

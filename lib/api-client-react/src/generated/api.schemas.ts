@@ -75,6 +75,7 @@ export interface Product {
   categoryId?: number | null;
   categoryName?: string | null;
   isActive: boolean;
+  expiresAt?: string | null;
   createdAt: string;
 }
 
@@ -87,6 +88,7 @@ export interface CreateProductRequest {
   imageUrl?: string;
   categoryId?: number;
   isActive?: boolean;
+  expiresAt?: string | null;
 }
 
 export interface ProductsResponse {
@@ -123,6 +125,11 @@ export interface Order {
   userEmail: string;
   status: OrderStatus;
   total: number;
+  subtotal?: number | null;
+  discountAmount?: number | null;
+  discountCode?: string | null;
+  customerName?: string | null;
+  isPOS: boolean;
   notes?: string | null;
   shippingAddress?: string | null;
   items: OrderItem[];
@@ -139,6 +146,71 @@ export interface CreateOrderRequest {
   items: CreateOrderRequestItemsItem[];
   notes?: string;
   shippingAddress?: string;
+  discountCode?: string;
+}
+
+export type DiscountType = (typeof DiscountType)[keyof typeof DiscountType];
+
+export const DiscountType = {
+  percentage: "percentage",
+  fixed: "fixed",
+} as const;
+
+export interface Discount {
+  id: number;
+  code: string;
+  name: string;
+  type: DiscountType;
+  value: number;
+  minOrderAmount?: number | null;
+  maxUses?: number | null;
+  usedCount: number;
+  isActive: boolean;
+  expiresAt?: string | null;
+  createdAt: string;
+}
+
+export type CreateDiscountRequestType =
+  (typeof CreateDiscountRequestType)[keyof typeof CreateDiscountRequestType];
+
+export const CreateDiscountRequestType = {
+  percentage: "percentage",
+  fixed: "fixed",
+} as const;
+
+export interface CreateDiscountRequest {
+  code: string;
+  name: string;
+  type: CreateDiscountRequestType;
+  value: number;
+  minOrderAmount?: number;
+  maxUses?: number;
+  isActive?: boolean;
+  expiresAt?: string;
+}
+
+export interface ValidateDiscountRequest {
+  code: string;
+  orderAmount: number;
+}
+
+export interface ValidateDiscountResponse {
+  valid: boolean;
+  discount?: Discount | null;
+  discountAmount: number;
+  message: string;
+}
+
+export type POSSaleRequestItemsItem = {
+  productId: number;
+  quantity: number;
+};
+
+export interface POSSaleRequest {
+  items: POSSaleRequestItemsItem[];
+  discountCode?: string;
+  customerName?: string;
+  notes?: string;
 }
 
 export type UpdateOrderStatusRequestStatus =

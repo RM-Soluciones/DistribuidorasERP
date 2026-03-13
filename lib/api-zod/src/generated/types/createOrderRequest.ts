@@ -11,4 +11,5 @@ export interface CreateOrderRequest {
   items: CreateOrderRequestItemsItem[];
   notes?: string;
   shippingAddress?: string;
+  discountCode?: string;
 }

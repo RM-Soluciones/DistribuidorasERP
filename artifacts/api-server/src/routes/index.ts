@@ -5,6 +5,8 @@ import categoriesRouter from "./categories";
 import productsRouter from "./products";
 import ordersRouter from "./orders";
 import adminRouter from "./admin";
+import discountsRouter from "./discounts";
+import posRouter from "./pos";
 
 const router: IRouter = Router();
 
@@ -13,6 +15,8 @@ router.use("/auth", authRouter);
 router.use("/categories", categoriesRouter);
 router.use("/products", productsRouter);
 router.use("/orders", ordersRouter);
+router.use("/discounts", discountsRouter);
+router.use("/admin/pos", posRouter);
 router.use("/admin", adminRouter);
 
 export default router;

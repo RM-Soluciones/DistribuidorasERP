@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, numeric, text, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, numeric, text, timestamp, pgEnum, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -18,8 +18,13 @@ export const ordersTable = pgTable("orders", {
   userId: integer("user_id").notNull().references(() => usersTable.id),
   status: orderStatusEnum("status").notNull().default("pending"),
   total: numeric("total", { precision: 12, scale: 2 }).notNull(),
+  subtotal: numeric("subtotal", { precision: 12, scale: 2 }),
+  discountAmount: numeric("discount_amount", { precision: 12, scale: 2 }),
+  discountCode: text("discount_code"),
   notes: text("notes"),
   shippingAddress: text("shipping_address"),
+  customerName: text("customer_name"),
+  isPOS: boolean("is_pos").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

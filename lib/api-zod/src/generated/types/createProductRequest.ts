@@ -15,4 +15,5 @@ export interface CreateProductRequest {
   imageUrl?: string;
   categoryId?: number;
   isActive?: boolean;
+  expiresAt?: string | null;
 }

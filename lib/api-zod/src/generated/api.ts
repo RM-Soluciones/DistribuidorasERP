@@ -138,6 +138,7 @@ export const GetProductsResponse = zod.object({
       categoryId: zod.number().nullish(),
       categoryName: zod.string().nullish(),
       isActive: zod.boolean(),
+      expiresAt: zod.string().nullish(),
       createdAt: zod.string(),
     }),
   ),
@@ -158,6 +159,7 @@ export const CreateProductBody = zod.object({
   imageUrl: zod.string().optional(),
   categoryId: zod.number().optional(),
   isActive: zod.boolean().optional(),
+  expiresAt: zod.string().nullish(),
 });
 
 /**
@@ -178,6 +180,7 @@ export const GetProductResponse = zod.object({
   categoryId: zod.number().nullish(),
   categoryName: zod.string().nullish(),
   isActive: zod.boolean(),
+  expiresAt: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -197,6 +200,7 @@ export const UpdateProductBody = zod.object({
   imageUrl: zod.string().optional(),
   categoryId: zod.number().optional(),
   isActive: zod.boolean().optional(),
+  expiresAt: zod.string().nullish(),
 });
 
 export const UpdateProductResponse = zod.object({
@@ -210,6 +214,7 @@ export const UpdateProductResponse = zod.object({
   categoryId: zod.number().nullish(),
   categoryName: zod.string().nullish(),
   isActive: zod.boolean(),
+  expiresAt: zod.string().nullish(),
   createdAt: zod.string(),
 });
 
@@ -258,6 +263,11 @@ export const GetOrdersResponse = zod.object({
         "cancelled",
       ]),
       total: zod.number(),
+      subtotal: zod.number().nullish(),
+      discountAmount: zod.number().nullish(),
+      discountCode: zod.string().nullish(),
+      customerName: zod.string().nullish(),
+      isPOS: zod.boolean(),
       notes: zod.string().nullish(),
       shippingAddress: zod.string().nullish(),
       items: zod.array(
@@ -291,6 +301,7 @@ export const CreateOrderBody = zod.object({
   ),
   notes: zod.string().optional(),
   shippingAddress: zod.string().optional(),
+  discountCode: zod.string().optional(),
 });
 
 /**
@@ -314,6 +325,11 @@ export const GetOrderResponse = zod.object({
     "cancelled",
   ]),
   total: zod.number(),
+  subtotal: zod.number().nullish(),
+  discountAmount: zod.number().nullish(),
+  discountCode: zod.string().nullish(),
+  customerName: zod.string().nullish(),
+  isPOS: zod.boolean(),
   notes: zod.string().nullish(),
   shippingAddress: zod.string().nullish(),
   items: zod.array(
@@ -362,6 +378,11 @@ export const UpdateOrderStatusResponse = zod.object({
     "cancelled",
   ]),
   total: zod.number(),
+  subtotal: zod.number().nullish(),
+  discountAmount: zod.number().nullish(),
+  discountCode: zod.string().nullish(),
+  customerName: zod.string().nullish(),
+  isPOS: zod.boolean(),
   notes: zod.string().nullish(),
   shippingAddress: zod.string().nullish(),
   items: zod.array(
@@ -376,6 +397,125 @@ export const UpdateOrderStatusResponse = zod.object({
   ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
+});
+
+/**
+ * @summary Validate a discount code
+ */
+export const ValidateDiscountBody = zod.object({
+  code: zod.string(),
+  orderAmount: zod.number(),
+});
+
+export const ValidateDiscountResponse = zod.object({
+  valid: zod.boolean(),
+  discount: zod
+    .object({
+      id: zod.number(),
+      code: zod.string(),
+      name: zod.string(),
+      type: zod.enum(["percentage", "fixed"]),
+      value: zod.number(),
+      minOrderAmount: zod.number().nullish(),
+      maxUses: zod.number().nullish(),
+      usedCount: zod.number(),
+      isActive: zod.boolean(),
+      expiresAt: zod.string().nullish(),
+      createdAt: zod.string(),
+    })
+    .nullish(),
+  discountAmount: zod.number(),
+  message: zod.string(),
+});
+
+/**
+ * @summary List all discounts (admin)
+ */
+export const GetDiscountsResponseItem = zod.object({
+  id: zod.number(),
+  code: zod.string(),
+  name: zod.string(),
+  type: zod.enum(["percentage", "fixed"]),
+  value: zod.number(),
+  minOrderAmount: zod.number().nullish(),
+  maxUses: zod.number().nullish(),
+  usedCount: zod.number(),
+  isActive: zod.boolean(),
+  expiresAt: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+export const GetDiscountsResponse = zod.array(GetDiscountsResponseItem);
+
+/**
+ * @summary Create a discount (admin)
+ */
+export const CreateDiscountBody = zod.object({
+  code: zod.string(),
+  name: zod.string(),
+  type: zod.enum(["percentage", "fixed"]),
+  value: zod.number(),
+  minOrderAmount: zod.number().optional(),
+  maxUses: zod.number().optional(),
+  isActive: zod.boolean().optional(),
+  expiresAt: zod.string().optional(),
+});
+
+/**
+ * @summary Update a discount (admin)
+ */
+export const UpdateDiscountParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateDiscountBody = zod.object({
+  code: zod.string(),
+  name: zod.string(),
+  type: zod.enum(["percentage", "fixed"]),
+  value: zod.number(),
+  minOrderAmount: zod.number().optional(),
+  maxUses: zod.number().optional(),
+  isActive: zod.boolean().optional(),
+  expiresAt: zod.string().optional(),
+});
+
+export const UpdateDiscountResponse = zod.object({
+  id: zod.number(),
+  code: zod.string(),
+  name: zod.string(),
+  type: zod.enum(["percentage", "fixed"]),
+  value: zod.number(),
+  minOrderAmount: zod.number().nullish(),
+  maxUses: zod.number().nullish(),
+  usedCount: zod.number(),
+  isActive: zod.boolean(),
+  expiresAt: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Delete a discount (admin)
+ */
+export const DeleteDiscountParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteDiscountResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Create a POS sale (admin)
+ */
+export const CreatePOSSaleBody = zod.object({
+  items: zod.array(
+    zod.object({
+      productId: zod.number(),
+      quantity: zod.number(),
+    }),
+  ),
+  discountCode: zod.string().optional(),
+  customerName: zod.string().optional(),
+  notes: zod.string().optional(),
 });
 
 /**
@@ -449,6 +589,11 @@ export const GetAdminStatsResponse = zod.object({
         "cancelled",
       ]),
       total: zod.number(),
+      subtotal: zod.number().nullish(),
+      discountAmount: zod.number().nullish(),
+      discountCode: zod.string().nullish(),
+      customerName: zod.string().nullish(),
+      isPOS: zod.boolean(),
       notes: zod.string().nullish(),
       shippingAddress: zod.string().nullish(),
       items: zod.array(

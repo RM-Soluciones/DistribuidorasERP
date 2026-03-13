@@ -4,6 +4,30 @@ import { eq, ilike, and, sql } from "drizzle-orm";
 
 const router = Router();
 
+function formatProduct(p: any) {
+  return {
+    ...p,
+    price: parseFloat(p.price as string),
+    expiresAt: p.expiresAt ? p.expiresAt.toISOString() : null,
+    createdAt: p.createdAt.toISOString(),
+  };
+}
+
+const productSelect = {
+  id: productsTable.id,
+  name: productsTable.name,
+  description: productsTable.description,
+  price: productsTable.price,
+  stock: productsTable.stock,
+  sku: productsTable.sku,
+  imageUrl: productsTable.imageUrl,
+  categoryId: productsTable.categoryId,
+  categoryName: categoriesTable.name,
+  isActive: productsTable.isActive,
+  expiresAt: productsTable.expiresAt,
+  createdAt: productsTable.createdAt,
+};
+
 router.get("/", async (req, res) => {
   const { categoryId, search, page = "1", limit = "20" } = req.query;
   const pageNum = parseInt(page as string) || 1;
@@ -17,19 +41,7 @@ router.get("/", async (req, res) => {
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
   const [products, countResult] = await Promise.all([
-    db.select({
-      id: productsTable.id,
-      name: productsTable.name,
-      description: productsTable.description,
-      price: productsTable.price,
-      stock: productsTable.stock,
-      sku: productsTable.sku,
-      imageUrl: productsTable.imageUrl,
-      categoryId: productsTable.categoryId,
-      categoryName: categoriesTable.name,
-      isActive: productsTable.isActive,
-      createdAt: productsTable.createdAt,
-    })
+    db.select(productSelect)
       .from(productsTable)
       .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
       .where(whereClause)
@@ -40,11 +52,7 @@ router.get("/", async (req, res) => {
   ]);
 
   res.json({
-    products: products.map(p => ({
-      ...p,
-      price: parseFloat(p.price as string),
-      createdAt: p.createdAt.toISOString(),
-    })),
+    products: products.map(formatProduct),
     total: countResult[0]?.count ?? 0,
     page: pageNum,
     limit: limitNum,
@@ -53,32 +61,20 @@ router.get("/", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const [product] = await db.select({
-    id: productsTable.id,
-    name: productsTable.name,
-    description: productsTable.description,
-    price: productsTable.price,
-    stock: productsTable.stock,
-    sku: productsTable.sku,
-    imageUrl: productsTable.imageUrl,
-    categoryId: productsTable.categoryId,
-    categoryName: categoriesTable.name,
-    isActive: productsTable.isActive,
-    createdAt: productsTable.createdAt,
-  })
+  const [product] = await db.select(productSelect)
     .from(productsTable)
     .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
     .where(eq(productsTable.id, id))
     .limit(1);
 
   if (!product) { res.status(404).json({ error: "Product not found" }); return; }
-  res.json({ ...product, price: parseFloat(product.price as string), createdAt: product.createdAt.toISOString() });
+  res.json(formatProduct(product));
 });
 
 router.post("/", async (req, res) => {
   const userId = (req.session as any).userId;
   if (!userId) { res.status(401).json({ error: "Not authenticated" }); return; }
-  const { name, description, price, stock, sku, imageUrl, categoryId, isActive } = req.body;
+  const { name, description, price, stock, sku, imageUrl, categoryId, isActive, expiresAt } = req.body;
   if (!name || price === undefined || stock === undefined) {
     res.status(400).json({ error: "Name, price and stock are required" }); return;
   }
@@ -91,15 +87,16 @@ router.post("/", async (req, res) => {
     imageUrl: imageUrl || null,
     categoryId: categoryId ? parseInt(categoryId) : null,
     isActive: isActive !== undefined ? isActive : true,
+    expiresAt: expiresAt ? new Date(expiresAt) : null,
   }).returning();
-  res.status(201).json({ ...product, price: parseFloat(product.price as string), createdAt: product.createdAt.toISOString() });
+  res.status(201).json(formatProduct({ ...product, categoryName: null }));
 });
 
 router.put("/:id", async (req, res) => {
   const userId = (req.session as any).userId;
   if (!userId) { res.status(401).json({ error: "Not authenticated" }); return; }
   const id = parseInt(req.params.id);
-  const { name, description, price, stock, sku, imageUrl, categoryId, isActive } = req.body;
+  const { name, description, price, stock, sku, imageUrl, categoryId, isActive, expiresAt } = req.body;
   const [product] = await db.update(productsTable).set({
     name,
     description: description || null,
@@ -109,10 +106,11 @@ router.put("/:id", async (req, res) => {
     imageUrl: imageUrl || null,
     categoryId: categoryId ? parseInt(categoryId) : null,
     isActive,
+    expiresAt: expiresAt ? new Date(expiresAt) : null,
     updatedAt: new Date(),
   }).where(eq(productsTable.id, id)).returning();
   if (!product) { res.status(404).json({ error: "Product not found" }); return; }
-  res.json({ ...product, price: parseFloat(product.price as string), createdAt: product.createdAt.toISOString() });
+  res.json(formatProduct({ ...product, categoryName: null }));
 });
 
 router.delete("/:id", async (req, res) => {

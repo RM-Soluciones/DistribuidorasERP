@@ -395,6 +395,118 @@ paths:
               schema:
                 $ref: "#/components/schemas/Order"
 
+  /discounts/validate:
+    post:
+      operationId: validateDiscount
+      tags: [orders]
+      summary: Validate a discount code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidateDiscountRequest"
+      responses:
+        "200":
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidateDiscountResponse"
+
+  /admin/discounts:
+    get:
+      operationId: getDiscounts
+      tags: [orders]
+      summary: List all discounts (admin)
+      responses:
+        "200":
+          description: Discounts list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Discount"
+    post:
+      operationId: createDiscount
+      tags: [orders]
+      summary: Create a discount (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDiscountRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Discount"
+
+  /admin/discounts/{id}:
+    put:
+      operationId: updateDiscount
+      tags: [orders]
+      summary: Update a discount (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDiscountRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Discount"
+    delete:
+      operationId: deleteDiscount
+      tags: [orders]
+      summary: Delete a discount (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/pos/sale:
+    post:
+      operationId: createPOSSale
+      tags: [orders]
+      summary: Create a POS sale (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/POSSaleRequest"
+      responses:
+        "201":
+          description: Sale created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
   /admin/users:
     get:
       operationId: getUsers
@@ -620,6 +732,9 @@ components:
           nullable: true
         isActive:
           type: boolean
+        expiresAt:
+          type: string
+          nullable: true
         createdAt:
           type: string
       required:
@@ -649,6 +764,9 @@ components:
           type: integer
         isActive:
           type: boolean
+        expiresAt:
+          type: string
+          nullable: true
       required:
         - name
         - price
@@ -712,6 +830,20 @@ components:
           enum: [pending, confirmed, processing, shipped, delivered, cancelled]
         total:
           type: number
+        subtotal:
+          type: number
+          nullable: true
+        discountAmount:
+          type: number
+          nullable: true
+        discountCode:
+          type: string
+          nullable: true
+        customerName:
+          type: string
+          nullable: true
+        isPOS:
+          type: boolean
         notes:
           type: string
           nullable: true
@@ -733,6 +865,7 @@ components:
         - userEmail
         - status
         - total
+        - isPOS
         - items
         - createdAt
         - updatedAt
@@ -755,6 +888,125 @@ components:
         notes:
           type: string
         shippingAddress:
+          type: string
+        discountCode:
+          type: string
+      required:
+        - items
+
+    Discount:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [percentage, fixed]
+        value:
+          type: number
+        minOrderAmount:
+          type: number
+          nullable: true
+        maxUses:
+          type: integer
+          nullable: true
+        usedCount:
+          type: integer
+        isActive:
+          type: boolean
+        expiresAt:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required:
+        - id
+        - code
+        - name
+        - type
+        - value
+        - usedCount
+        - isActive
+        - createdAt
+
+    CreateDiscountRequest:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [percentage, fixed]
+        value:
+          type: number
+        minOrderAmount:
+          type: number
+        maxUses:
+          type: integer
+        isActive:
+          type: boolean
+        expiresAt:
+          type: string
+      required:
+        - code
+        - name
+        - type
+        - value
+
+    ValidateDiscountRequest:
+      type: object
+      properties:
+        code:
+          type: string
+        orderAmount:
+          type: number
+      required:
+        - code
+        - orderAmount
+
+    ValidateDiscountResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        discount:
+          $ref: "#/components/schemas/Discount"
+          nullable: true
+        discountAmount:
+          type: number
+        message:
+          type: string
+      required:
+        - valid
+        - discountAmount
+        - message
+
+    POSSaleRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: integer
+              quantity:
+                type: integer
+            required:
+              - productId
+              - quantity
+        discountCode:
+          type: string
+        customerName:
+          type: string
+        notes:
           type: string
       required:
         - items

@@ -13,6 +13,7 @@ export const productsTable = pgTable("products", {
   imageUrl: text("image_url"),
   categoryId: integer("category_id").references(() => categoriesTable.id),
   isActive: boolean("is_active").notNull().default(true),
+  expiresAt: timestamp("expires_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

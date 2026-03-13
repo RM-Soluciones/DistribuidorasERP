@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, ordersTable, orderItemsTable, usersTable, productsTable } from "@workspace/db";
+import { db, ordersTable, orderItemsTable, usersTable, productsTable, discountsTable } from "@workspace/db";
 import { eq, and, sql, inArray } from "drizzle-orm";
 
 const router = Router();
@@ -12,6 +12,11 @@ async function getOrderWithItems(orderId: number) {
     userEmail: usersTable.email,
     status: ordersTable.status,
     total: ordersTable.total,
+    subtotal: ordersTable.subtotal,
+    discountAmount: ordersTable.discountAmount,
+    discountCode: ordersTable.discountCode,
+    customerName: ordersTable.customerName,
+    isPOS: ordersTable.isPOS,
     notes: ordersTable.notes,
     shippingAddress: ordersTable.shippingAddress,
     createdAt: ordersTable.createdAt,
@@ -39,6 +44,8 @@ async function getOrderWithItems(orderId: number) {
   return {
     ...order,
     total: parseFloat(order.total as string),
+    subtotal: order.subtotal ? parseFloat(order.subtotal as string) : null,
+    discountAmount: order.discountAmount ? parseFloat(order.discountAmount as string) : null,
     createdAt: order.createdAt!.toISOString(),
     updatedAt: order.updatedAt!.toISOString(),
     items: items.map(i => ({
@@ -79,6 +86,11 @@ router.get("/", async (req, res) => {
       userEmail: usersTable.email,
       status: ordersTable.status,
       total: ordersTable.total,
+      subtotal: ordersTable.subtotal,
+      discountAmount: ordersTable.discountAmount,
+      discountCode: ordersTable.discountCode,
+      customerName: ordersTable.customerName,
+      isPOS: ordersTable.isPOS,
       notes: ordersTable.notes,
       shippingAddress: ordersTable.shippingAddress,
       createdAt: ordersTable.createdAt,
@@ -126,6 +138,8 @@ router.get("/", async (req, res) => {
     orders: orders.map(o => ({
       ...o,
       total: parseFloat(o.total as string),
+      subtotal: o.subtotal ? parseFloat(o.subtotal as string) : null,
+      discountAmount: o.discountAmount ? parseFloat(o.discountAmount as string) : null,
       createdAt: o.createdAt!.toISOString(),
       updatedAt: o.updatedAt!.toISOString(),
       items: itemsMap[o.id] || [],
@@ -154,7 +168,7 @@ router.post("/", async (req, res) => {
   const userId = (req.session as any).userId;
   if (!userId) { res.status(401).json({ error: "Not authenticated" }); return; }
 
-  const { items, notes, shippingAddress } = req.body;
+  const { items, notes, shippingAddress, discountCode } = req.body;
   if (!items || !Array.isArray(items) || items.length === 0) {
     res.status(400).json({ error: "At least one item is required" }); return;
   }
@@ -163,7 +177,7 @@ router.post("/", async (req, res) => {
   const products = await db.select().from(productsTable).where(inArray(productsTable.id, productIds));
   const productMap = Object.fromEntries(products.map(p => [p.id, p]));
 
-  let total = 0;
+  let subtotal = 0;
   const orderItemsData = [];
   for (const item of items) {
     const product = productMap[item.productId];
@@ -172,15 +186,40 @@ router.post("/", async (req, res) => {
       res.status(400).json({ error: `Insufficient stock for ${product.name}` }); return;
     }
     const price = parseFloat(product.price as string);
-    const subtotal = price * item.quantity;
-    total += subtotal;
-    orderItemsData.push({ productId: item.productId, quantity: item.quantity, unitPrice: price, subtotal });
+    const itemSubtotal = price * item.quantity;
+    subtotal += itemSubtotal;
+    orderItemsData.push({ productId: item.productId, quantity: item.quantity, unitPrice: price, subtotal: itemSubtotal });
   }
+
+  // Apply discount code
+  let discountAmount = 0;
+  let appliedCode: string | null = null;
+  if (discountCode) {
+    const [discount] = await db.select().from(discountsTable).where(eq(discountsTable.code, discountCode.toUpperCase())).limit(1);
+    if (discount && discount.isActive && (!discount.expiresAt || discount.expiresAt > new Date())) {
+      if (!discount.minOrderAmount || subtotal >= parseFloat(discount.minOrderAmount as string)) {
+        if (!discount.maxUses || discount.usedCount < discount.maxUses) {
+          if (discount.type === "percentage") {
+            discountAmount = (subtotal * parseFloat(discount.value as string)) / 100;
+          } else {
+            discountAmount = Math.min(parseFloat(discount.value as string), subtotal);
+          }
+          appliedCode = discount.code;
+          await db.update(discountsTable).set({ usedCount: discount.usedCount + 1 }).where(eq(discountsTable.id, discount.id));
+        }
+      }
+    }
+  }
+
+  const total = Math.max(0, subtotal - discountAmount);
 
   const [order] = await db.insert(ordersTable).values({
     userId,
     status: "pending",
+    subtotal: subtotal.toString(),
     total: total.toString(),
+    discountAmount: discountAmount > 0 ? discountAmount.toString() : null,
+    discountCode: appliedCode,
     notes: notes || null,
     shippingAddress: shippingAddress || null,
   }).returning();
@@ -195,7 +234,6 @@ router.post("/", async (req, res) => {
     }))
   );
 
-  // Decrement stock
   for (const item of orderItemsData) {
     const product = productMap[item.productId];
     await db.update(productsTable).set({ stock: product.stock - item.quantity }).where(eq(productsTable.id, item.productId));

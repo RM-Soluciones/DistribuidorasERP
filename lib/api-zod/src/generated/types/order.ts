@@ -15,6 +15,11 @@ export interface Order {
   userEmail: string;
   status: OrderStatus;
   total: number;
+  subtotal?: number | null;
+  discountAmount?: number | null;
+  discountCode?: string | null;
+  customerName?: string | null;
+  isPOS: boolean;
   notes?: string | null;
   shippingAddress?: string | null;
   items: OrderItem[];
