@@ -45,3 +45,8 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+DATABASE_URL = "postgresql://postgres.ljolohtaxdeaenwszojr:rmsoluciones.io@aws-0-us-west-2.pooler.supabase.com:6543/postgres"
