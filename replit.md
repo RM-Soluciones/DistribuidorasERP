@@ -20,11 +20,10 @@ Full-stack distributor company web app. Public storefront + private admin ERP pa
 - **Node.js version**: 24
 - **Package manager**: pnpm
 - **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+- **Backend**: Supabase (PostgreSQL + Auth + Storage) – el código de Express/Drizzle ya no es necesario
+- **Database schema**: definido en `supabase_migration.sql`
+- **Validation**: Zod (en frontend)
+- **Build**: Vite (React frontend)
 - **Frontend**: React + Vite, TailwindCSS, shadcn/ui, React Query, Zustand, Framer Motion
 
 ## Structure
@@ -77,25 +76,27 @@ artifacts-monorepo/
 
 ## Auth
 
-Session-based auth via express-session. `/api/auth/me` returns current user.
+Auth is handled by **Supabase Auth** (email/password). The frontend uses `@supabase/supabase-js` and the `users` table in Supabase is used for profile data.
 
-## API Routes
+## Backend (Supabase)
 
-All routes under `/api`:
-- `/auth/register`, `/auth/login`, `/auth/logout`, `/auth/me`
-- `/categories` (GET, POST, PUT/:id, DELETE/:id)
-- `/products` (GET, POST, GET/:id, PUT/:id, DELETE/:id)
-- `/orders` (GET, POST, GET/:id, PUT/:id/status)
-- `/admin/users`, `/admin/stats`
+This project no longer runs an Express API server; the frontend talks directly to Supabase using:
+- `@supabase/supabase-js` for auth + DB queries
+- `supabase_migration.sql` for schema creation
 
-## Codegen
+### Tables used by the app
+- `users` (profiles)
+- `categories`
+- `products`
+- `orders`
+- `order_items`
+- `discounts`
+- `offers`, `offer_products`
+- `suppliers`, `purchases`, `purchase_items`, `supplier_payments`
+- `payment_methods`
 
-Run: `pnpm --filter @workspace/api-spec run codegen`
+## DB setup (Supabase)
 
-## DB Seed
+Run the SQL in `supabase_migration.sql` in Supabase SQL editor to create the schema + demo seed data.
 
-Run: `pnpm --filter @workspace/scripts run seed`
-
-## DB Migration
-
-Run: `pnpm --filter @workspace/db run push`
+> ⚠️ You should configure Row Level Security (RLS) policies in Supabase for production. The current setup assumes you are running in a trusted environment (development/demo).
