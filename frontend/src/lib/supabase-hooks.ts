@@ -63,6 +63,19 @@ export type Order = {
   userEmail?: string;
 };
 
+export type OrderDelivery = {
+  id: number;
+  orderId: number;
+  assignedTo?: number | null;
+  assignedAt: string;
+  deliveryDate?: string | null;
+  status: string;
+  deliveredAt?: string | null;
+  notes?: string | null;
+  order?: Order;
+  driver?: UserRow;
+};
+
 export type Discount = {
   id: number;
   code: string;
@@ -133,7 +146,7 @@ export type UserRow = {
   id: number;
   name: string;
   email: string;
-  role: "customer" | "admin";
+  role: "customer" | "admin" | "seller" | "delivery";
   phone?: string | null;
   address?: string | null;
   createdAt: string;
@@ -198,6 +211,21 @@ function mapOrder(r: any): Order {
     items: (r.order_items || []).map(mapOrderItem),
     userName: r.users?.name,
     userEmail: r.users?.email,
+  };
+}
+
+function mapOrderDelivery(r: any): OrderDelivery {
+  return {
+    id: r.id,
+    orderId: r.order_id,
+    assignedTo: r.assigned_to,
+    assignedAt: r.assigned_at,
+    deliveryDate: r.delivery_date,
+    status: r.status,
+    deliveredAt: r.delivered_at,
+    notes: r.notes,
+    order: r.orders ? mapOrder(r.orders) : undefined,
+    driver: r.assigned_to ? mapUser(r.assigned_to) : undefined,
   };
 }
 
@@ -539,6 +567,70 @@ export function useUpdateOrderStatus() {
   });
 }
 
+export function useOrderDeliveries(params?: { orderId?: number; assignedTo?: number; deliveryDate?: string; status?: string }) {
+  return useQuery({
+    queryKey: ["order-deliveries", params],
+    queryFn: async () => {
+      let q = supabase
+        .from("order_deliveries")
+        .select(
+          "*, orders(*, order_items(*, products(name)), users(name,email)), assigned_to(*)"
+        )
+        .order("delivery_date", { ascending: true });
+
+      if (params?.orderId) {
+        q = q.eq("order_id", params.orderId);
+      }
+      if (params?.assignedTo) {
+        q = q.eq("assigned_to", params.assignedTo);
+      }
+      if (params?.deliveryDate) {
+        q = q.eq("delivery_date", params.deliveryDate);
+      }
+      if (params?.status) {
+        q = q.eq("status", params.status);
+      }
+
+      const { data, error } = await q;
+      if (error) throw error;
+      return { deliveries: (data || []).map(mapOrderDelivery) };
+    },
+  });
+}
+
+export function useAssignOrderDelivery() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      orderId: number;
+      assignedTo: number;
+      deliveryDate?: string;
+      status?: string;
+      notes?: string;
+      deliveredAt?: string;
+    }) => {
+      const { error } = await supabase
+        .from("order_deliveries")
+        .upsert(
+          {
+            order_id: payload.orderId,
+            assigned_to: payload.assignedTo,
+            delivery_date: payload.deliveryDate || null,
+            status: payload.status || "pending",
+            delivered_at: payload.deliveredAt || null,
+            notes: payload.notes || null,
+          },
+          { onConflict: "order_id" }
+        );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["order-deliveries"] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+    },
+  });
+}
+
 export function useCreateOrder() {
   const qc = useQueryClient();
   return useMutation({
@@ -704,7 +796,7 @@ export function useAdminStats() {
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 
-export function useUsers(params?: { limit?: number }) {
+export function useUsers(params?: { limit?: number; role?: string }) {
   return useQuery({
     queryKey: ["users", params],
     queryFn: async () => {
@@ -712,6 +804,9 @@ export function useUsers(params?: { limit?: number }) {
         .from("users")
         .select("*")
         .order("created_at", { ascending: false });
+      if (params?.role) {
+        q = q.eq("role", params.role);
+      }
       if (params?.limit) q = q.limit(params.limit);
       const { data, error } = await q;
       if (error) throw error;
@@ -727,6 +822,7 @@ export function useCreateAdminUser() {
       name: string;
       email: string;
       password?: string;
+      role?: "admin" | "seller" | "delivery" | "customer";
       phone?: string;
       address?: string;
     }) => {
@@ -735,7 +831,7 @@ export function useCreateAdminUser() {
           name: data.name,
           email: data.email,
           password_hash: "SUPABASE_AUTH",
-          role: "admin",
+          role: data.role ?? "admin",
           phone: data.phone || null,
           address: data.address || null,
         },

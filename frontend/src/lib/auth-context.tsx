@@ -6,7 +6,7 @@ export type UserProfile = {
   id: number;
   name: string;
   email: string;
-  role: "customer" | "admin";
+  role: "customer" | "admin" | "seller" | "delivery";
   phone?: string | null;
   address?: string | null;
   createdAt: string;
@@ -23,6 +23,7 @@ type AuthContextType = {
     name: string;
     phone?: string;
     address?: string;
+    role?: "customer" | "seller" | "delivery";
   }) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -95,12 +96,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     name,
     phone,
     address,
+    role,
   }: {
     email: string;
     password: string;
     name: string;
     phone?: string;
     address?: string;
+    role?: "customer" | "seller" | "delivery";
   }) => {
     const { error } = await supabase.auth.signUp({ email, password });
     if (error) throw new Error(error.message);
@@ -110,7 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         name,
         email,
         password_hash: "SUPABASE_AUTH",
-        role: "customer",
+        role: role ?? "customer",
         phone: phone || null,
         address: address || null,
       },

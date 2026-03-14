@@ -28,6 +28,9 @@ import SupplierDetail from "./pages/admin/SupplierDetail";
 import AdminPurchases from "./pages/admin/Purchases";
 import AdminPaymentMethods from "./pages/admin/PaymentMethods";
 
+import SellerOrders from "./pages/seller/Orders";
+import DeliveryDashboard from "./pages/delivery/Deliveries";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { retry: 1, refetchOnWindowFocus: false },
@@ -44,6 +47,8 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       <Route path="/customer/dashboard" component={CustomerDashboard} />
+      <Route path="/seller" component={SellerOrders} />
+      <Route path="/delivery" component={DeliveryDashboard} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/pos" component={AdminPOS} />
       <Route path="/admin/products" component={AdminProducts} />

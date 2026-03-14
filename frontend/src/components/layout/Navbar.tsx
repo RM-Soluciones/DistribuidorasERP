@@ -75,6 +75,20 @@ export function Navbar() {
                       </Link>
                     </DropdownMenuItem>
                   )}
+                  {user.role === 'seller' && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/seller" className="cursor-pointer flex items-center gap-2 w-full">
+                        <Package className="h-4 w-4" /> Pedidos
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {user.role === 'delivery' && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/delivery" className="cursor-pointer flex items-center gap-2 w-full">
+                        <Package className="h-4 w-4" /> Entregas
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem asChild>
                     <Link href="/customer/dashboard" className="cursor-pointer flex items-center gap-2 w-full">
                       <Package className="h-4 w-4" /> My Orders
