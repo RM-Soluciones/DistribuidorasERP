@@ -1,17 +1,44 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Package, ShoppingCart, Users, FolderTree, LogOut, Tag, Monitor } from "lucide-react";
+import {
+  LayoutDashboard, Package, ShoppingCart, Users, FolderTree, LogOut,
+  Tag, Monitor, Gift, Truck, ShoppingBag, CreditCard, ChevronRight
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLogout } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 
-const navItems = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/admin/pos", label: "Punto de Venta", icon: Monitor },
-  { href: "/admin/orders", label: "Pedidos", icon: ShoppingCart },
-  { href: "/admin/products", label: "Productos", icon: Package },
-  { href: "/admin/categories", label: "Categorías", icon: FolderTree },
-  { href: "/admin/discounts", label: "Descuentos", icon: Tag },
-  { href: "/admin/users", label: "Usuarios", icon: Users },
+const navSections = [
+  {
+    label: "Ventas",
+    items: [
+      { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+      { href: "/admin/pos", label: "Punto de Venta", icon: Monitor },
+      { href: "/admin/orders", label: "Pedidos", icon: ShoppingCart },
+    ],
+  },
+  {
+    label: "Catálogo",
+    items: [
+      { href: "/admin/products", label: "Productos", icon: Package },
+      { href: "/admin/categories", label: "Categorías", icon: FolderTree },
+      { href: "/admin/discounts", label: "Descuentos", icon: Tag },
+      { href: "/admin/offers", label: "Ofertas Combo", icon: Gift },
+    ],
+  },
+  {
+    label: "Compras",
+    items: [
+      { href: "/admin/suppliers", label: "Proveedores", icon: Truck },
+      { href: "/admin/purchases", label: "Compras", icon: ShoppingBag },
+      { href: "/admin/payment-methods", label: "Medios de Pago", icon: CreditCard },
+    ],
+  },
+  {
+    label: "Sistema",
+    items: [
+      { href: "/admin/users", label: "Usuarios", icon: Users },
+    ],
+  },
 ];
 
 export function AdminSidebar() {
@@ -28,36 +55,44 @@ export function AdminSidebar() {
     });
   };
 
+  const isActive = (href: string, exact?: boolean) =>
+    exact ? location === href : (location === href || location.startsWith(href + "/") || location.startsWith(href + "?"));
+
   return (
     <div className="w-64 bg-card border-r border-border h-[calc(100vh-4rem)] flex flex-col fixed left-0 top-16 z-40">
-      <div className="flex-1 py-6 px-4 space-y-1 overflow-y-auto">
-        <div className="mb-4 px-2">
-          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Panel Admin</h2>
-        </div>
-        {navItems.map((item) => {
-          const isActive = item.exact ? location === item.href : (location === item.href || location.startsWith(item.href + "/") || location.startsWith(item.href + "?"));
-          return (
-            <Link key={item.href} href={item.href}>
-              <span className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group cursor-pointer",
-                isActive
-                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-              )}>
-                <item.icon className={cn("h-5 w-5", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground")} />
-                {item.label}
-              </span>
-            </Link>
-          );
-        })}
+      <div className="flex-1 py-4 px-3 space-y-4 overflow-y-auto">
+        {navSections.map((section) => (
+          <div key={section.label}>
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 mb-1">{section.label}</p>
+            <div className="space-y-0.5">
+              {section.items.map((item) => {
+                const active = isActive(item.href, item.exact);
+                return (
+                  <Link key={item.href} href={item.href}>
+                    <span className={cn(
+                      "flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 group cursor-pointer",
+                      active
+                        ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    )}>
+                      <item.icon className={cn("h-4 w-4 flex-shrink-0", active ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground")} />
+                      <span className="flex-1">{item.label}</span>
+                      {!active && <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-40 transition-opacity"/>}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
-      <div className="p-4 border-t border-border">
+      <div className="p-3 border-t border-border">
         <button
           onClick={handleLogout}
-          className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+          className="flex w-full items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
         >
-          <LogOut className="h-5 w-5" />
+          <LogOut className="h-4 w-4" />
           Cerrar sesión
         </button>
       </div>

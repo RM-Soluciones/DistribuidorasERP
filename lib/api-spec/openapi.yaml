@@ -584,6 +584,374 @@ paths:
               schema:
                 $ref: "#/components/schemas/AdminStats"
 
+  /admin/offers:
+    get:
+      operationId: getOffers
+      tags: [offers]
+      summary: List all product-based offers (admin)
+      responses:
+        "200":
+          description: Offers list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Offer"
+    post:
+      operationId: createOffer
+      tags: [offers]
+      summary: Create a product-based offer (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOfferRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Offer"
+
+  /admin/offers/{id}:
+    put:
+      operationId: updateOffer
+      tags: [offers]
+      summary: Update a product-based offer (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOfferRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Offer"
+    delete:
+      operationId: deleteOffer
+      tags: [offers]
+      summary: Delete a product-based offer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /offers/check:
+    post:
+      operationId: checkOffers
+      tags: [offers]
+      summary: Check applicable product offers for a cart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckOffersRequest"
+      responses:
+        "200":
+          description: Applicable offers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApplicableOffer"
+
+  /admin/suppliers:
+    get:
+      operationId: getSuppliers
+      tags: [suppliers]
+      summary: List all suppliers (admin)
+      responses:
+        "200":
+          description: Suppliers list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Supplier"
+    post:
+      operationId: createSupplier
+      tags: [suppliers]
+      summary: Create a supplier (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSupplierRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+
+  /admin/suppliers/{id}:
+    get:
+      operationId: getSupplier
+      tags: [suppliers]
+      summary: Get supplier with payment history
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Supplier detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupplierDetail"
+    put:
+      operationId: updateSupplier
+      tags: [suppliers]
+      summary: Update a supplier (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSupplierRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+    delete:
+      operationId: deleteSupplier
+      tags: [suppliers]
+      summary: Delete a supplier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/payment-methods:
+    get:
+      operationId: getPaymentMethods
+      tags: [suppliers]
+      summary: List all payment methods (admin)
+      responses:
+        "200":
+          description: Payment methods list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PaymentMethod"
+    post:
+      operationId: createPaymentMethod
+      tags: [suppliers]
+      summary: Create a payment method (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePaymentMethodRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentMethod"
+
+  /admin/payment-methods/{id}:
+    put:
+      operationId: updatePaymentMethod
+      tags: [suppliers]
+      summary: Update a payment method
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePaymentMethodRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentMethod"
+    delete:
+      operationId: deletePaymentMethod
+      tags: [suppliers]
+      summary: Delete a payment method
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/purchases:
+    get:
+      operationId: getPurchases
+      tags: [suppliers]
+      summary: List all purchases (admin)
+      parameters:
+        - name: supplierId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Purchases list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Purchase"
+    post:
+      operationId: createPurchase
+      tags: [suppliers]
+      summary: Create a purchase (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePurchaseRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Purchase"
+
+  /admin/purchases/{id}:
+    get:
+      operationId: getPurchase
+      tags: [suppliers]
+      summary: Get purchase with items and payments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Purchase detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Purchase"
+    put:
+      operationId: updatePurchase
+      tags: [suppliers]
+      summary: Update a purchase (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePurchaseRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Purchase"
+
+  /admin/purchases/{id}/payments:
+    post:
+      operationId: addSupplierPayment
+      tags: [suppliers]
+      summary: Add a payment to a purchase
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddPaymentRequest"
+      responses:
+        "201":
+          description: Payment added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Purchase"
+
 components:
   schemas:
     HealthStatus:
@@ -1099,4 +1467,410 @@ components:
         - totalProducts
         - totalUsers
         - pendingOrders
+
+    OfferProduct:
+      type: object
+      properties:
+        productId:
+          type: integer
+        productName:
+          type: string
+        minQuantity:
+          type: integer
+      required:
+        - productId
+        - minQuantity
+
+    Offer:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum: [percentage, fixed_amount, bundle_price]
+        value:
+          type: number
+        minTotalQuantity:
+          type: integer
+          nullable: true
+        isActive:
+          type: boolean
+        expiresAt:
+          type: string
+          nullable: true
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/OfferProduct"
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - type
+        - value
+        - isActive
+        - products
+        - createdAt
+
+    CreateOfferRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [percentage, fixed_amount, bundle_price]
+        value:
+          type: number
+        minTotalQuantity:
+          type: integer
+        isActive:
+          type: boolean
+        expiresAt:
+          type: string
+        products:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: integer
+              minQuantity:
+                type: integer
+            required:
+              - productId
+              - minQuantity
+      required:
+        - name
+        - type
+        - value
+        - products
+
+    CheckOffersRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: integer
+              quantity:
+                type: integer
+            required:
+              - productId
+              - quantity
+      required:
+        - items
+
+    ApplicableOffer:
+      type: object
+      properties:
+        offerId:
+          type: integer
+        offerName:
+          type: string
+        offerType:
+          type: string
+        discountAmount:
+          type: number
+        description:
+          type: string
+      required:
+        - offerId
+        - offerName
+        - offerType
+        - discountAmount
+
+    Supplier:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        contactName:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        taxId:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+        totalDebt:
+          type: number
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - isActive
+        - totalDebt
+        - createdAt
+
+    SupplierDetail:
+      allOf:
+        - $ref: "#/components/schemas/Supplier"
+        - type: object
+          properties:
+            purchases:
+              type: array
+              items:
+                $ref: "#/components/schemas/Purchase"
+            payments:
+              type: array
+              items:
+                $ref: "#/components/schemas/SupplierPayment"
+
+    CreateSupplierRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        contactName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        taxId:
+          type: string
+        notes:
+          type: string
+        isActive:
+          type: boolean
+      required:
+        - name
+
+    PaymentMethod:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [cash, bank_transfer, credit_card, debit_card, check, other]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - type
+        - isActive
+        - createdAt
+
+    CreatePaymentMethodRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [cash, bank_transfer, credit_card, debit_card, check, other]
+        isActive:
+          type: boolean
+      required:
+        - name
+        - type
+
+    PurchaseItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: string
+        quantity:
+          type: integer
+        purchasePrice:
+          type: number
+        salePrice:
+          type: number
+        margin:
+          type: number
+        expiresAt:
+          type: string
+          nullable: true
+      required:
+        - id
+        - productId
+        - quantity
+        - purchasePrice
+        - salePrice
+        - margin
+
+    SupplierPayment:
+      type: object
+      properties:
+        id:
+          type: integer
+        purchaseId:
+          type: integer
+        supplierId:
+          type: integer
+        amount:
+          type: number
+        paymentMethodId:
+          type: integer
+          nullable: true
+        paymentMethodName:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        paidAt:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - purchaseId
+        - supplierId
+        - amount
+        - paidAt
+        - createdAt
+
+    Purchase:
+      type: object
+      properties:
+        id:
+          type: integer
+        supplierId:
+          type: integer
+        supplierName:
+          type: string
+        invoiceNumber:
+          type: string
+          nullable: true
+        purchaseDate:
+          type: string
+        totalAmount:
+          type: number
+        paidAmount:
+          type: number
+        balance:
+          type: number
+        status:
+          type: string
+          enum: [pending, partial, paid]
+        notes:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PurchaseItem"
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupplierPayment"
+        createdAt:
+          type: string
+      required:
+        - id
+        - supplierId
+        - supplierName
+        - purchaseDate
+        - totalAmount
+        - paidAmount
+        - balance
+        - status
+        - items
+        - payments
+        - createdAt
+
+    CreatePurchaseRequest:
+      type: object
+      properties:
+        supplierId:
+          type: integer
+        invoiceNumber:
+          type: string
+        purchaseDate:
+          type: string
+        notes:
+          type: string
+        initialPaymentAmount:
+          type: number
+        paymentMethodId:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: integer
+              quantity:
+                type: integer
+              purchasePrice:
+                type: number
+              salePrice:
+                type: number
+              expiresAt:
+                type: string
+            required:
+              - productId
+              - quantity
+              - purchasePrice
+              - salePrice
+      required:
+        - supplierId
+        - items
+
+    UpdatePurchaseRequest:
+      type: object
+      properties:
+        invoiceNumber:
+          type: string
+        purchaseDate:
+          type: string
+        notes:
+          type: string
+        status:
+          type: string
+          enum: [pending, partial, paid]
+
+    AddPaymentRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+        paymentMethodId:
+          type: integer
+        notes:
+          type: string
+      required:
+        - amount
         - recentOrders

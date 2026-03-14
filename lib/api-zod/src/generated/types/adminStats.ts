@@ -13,5 +13,5 @@ export interface AdminStats {
   totalProducts: number;
   totalUsers: number;
   pendingOrders: number;
-  recentOrders: Order[];
+  recentOrders?: Order[];
 }

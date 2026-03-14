@@ -574,40 +574,580 @@ export const GetAdminStatsResponse = zod.object({
   totalProducts: zod.number(),
   totalUsers: zod.number(),
   pendingOrders: zod.number(),
-  recentOrders: zod.array(
+  recentOrders: zod
+    .array(
+      zod.object({
+        id: zod.number(),
+        userId: zod.number(),
+        userName: zod.string(),
+        userEmail: zod.string(),
+        status: zod.enum([
+          "pending",
+          "confirmed",
+          "processing",
+          "shipped",
+          "delivered",
+          "cancelled",
+        ]),
+        total: zod.number(),
+        subtotal: zod.number().nullish(),
+        discountAmount: zod.number().nullish(),
+        discountCode: zod.string().nullish(),
+        customerName: zod.string().nullish(),
+        isPOS: zod.boolean(),
+        notes: zod.string().nullish(),
+        shippingAddress: zod.string().nullish(),
+        items: zod.array(
+          zod.object({
+            id: zod.number(),
+            productId: zod.number(),
+            productName: zod.string(),
+            quantity: zod.number(),
+            unitPrice: zod.number(),
+            subtotal: zod.number(),
+          }),
+        ),
+        createdAt: zod.string(),
+        updatedAt: zod.string(),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary List all product-based offers (admin)
+ */
+export const GetOffersResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  description: zod.string().nullish(),
+  type: zod.enum(["percentage", "fixed_amount", "bundle_price"]),
+  value: zod.number(),
+  minTotalQuantity: zod.number().nullish(),
+  isActive: zod.boolean(),
+  expiresAt: zod.string().nullish(),
+  products: zod.array(
     zod.object({
-      id: zod.number(),
-      userId: zod.number(),
-      userName: zod.string(),
-      userEmail: zod.string(),
-      status: zod.enum([
-        "pending",
-        "confirmed",
-        "processing",
-        "shipped",
-        "delivered",
-        "cancelled",
-      ]),
-      total: zod.number(),
-      subtotal: zod.number().nullish(),
-      discountAmount: zod.number().nullish(),
-      discountCode: zod.string().nullish(),
-      customerName: zod.string().nullish(),
-      isPOS: zod.boolean(),
-      notes: zod.string().nullish(),
-      shippingAddress: zod.string().nullish(),
-      items: zod.array(
-        zod.object({
-          id: zod.number(),
-          productId: zod.number(),
-          productName: zod.string(),
-          quantity: zod.number(),
-          unitPrice: zod.number(),
-          subtotal: zod.number(),
-        }),
-      ),
-      createdAt: zod.string(),
-      updatedAt: zod.string(),
+      productId: zod.number(),
+      productName: zod.string().optional(),
+      minQuantity: zod.number(),
     }),
   ),
+  createdAt: zod.string(),
+});
+export const GetOffersResponse = zod.array(GetOffersResponseItem);
+
+/**
+ * @summary Create a product-based offer (admin)
+ */
+export const CreateOfferBody = zod.object({
+  name: zod.string(),
+  description: zod.string().optional(),
+  type: zod.enum(["percentage", "fixed_amount", "bundle_price"]),
+  value: zod.number(),
+  minTotalQuantity: zod.number().optional(),
+  isActive: zod.boolean().optional(),
+  expiresAt: zod.string().optional(),
+  products: zod.array(
+    zod.object({
+      productId: zod.number(),
+      minQuantity: zod.number(),
+    }),
+  ),
+});
+
+/**
+ * @summary Update a product-based offer (admin)
+ */
+export const UpdateOfferParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateOfferBody = zod.object({
+  name: zod.string(),
+  description: zod.string().optional(),
+  type: zod.enum(["percentage", "fixed_amount", "bundle_price"]),
+  value: zod.number(),
+  minTotalQuantity: zod.number().optional(),
+  isActive: zod.boolean().optional(),
+  expiresAt: zod.string().optional(),
+  products: zod.array(
+    zod.object({
+      productId: zod.number(),
+      minQuantity: zod.number(),
+    }),
+  ),
+});
+
+export const UpdateOfferResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  description: zod.string().nullish(),
+  type: zod.enum(["percentage", "fixed_amount", "bundle_price"]),
+  value: zod.number(),
+  minTotalQuantity: zod.number().nullish(),
+  isActive: zod.boolean(),
+  expiresAt: zod.string().nullish(),
+  products: zod.array(
+    zod.object({
+      productId: zod.number(),
+      productName: zod.string().optional(),
+      minQuantity: zod.number(),
+    }),
+  ),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Delete a product-based offer
+ */
+export const DeleteOfferParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteOfferResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary Check applicable product offers for a cart
+ */
+export const CheckOffersBody = zod.object({
+  items: zod.array(
+    zod.object({
+      productId: zod.number(),
+      quantity: zod.number(),
+    }),
+  ),
+});
+
+export const CheckOffersResponseItem = zod.object({
+  offerId: zod.number(),
+  offerName: zod.string(),
+  offerType: zod.string(),
+  discountAmount: zod.number(),
+  description: zod.string().optional(),
+});
+export const CheckOffersResponse = zod.array(CheckOffersResponseItem);
+
+/**
+ * @summary List all suppliers (admin)
+ */
+export const GetSuppliersResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  contactName: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  email: zod.string().nullish(),
+  address: zod.string().nullish(),
+  taxId: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  isActive: zod.boolean(),
+  totalDebt: zod.number(),
+  createdAt: zod.string(),
+});
+export const GetSuppliersResponse = zod.array(GetSuppliersResponseItem);
+
+/**
+ * @summary Create a supplier (admin)
+ */
+export const CreateSupplierBody = zod.object({
+  name: zod.string(),
+  contactName: zod.string().optional(),
+  phone: zod.string().optional(),
+  email: zod.string().optional(),
+  address: zod.string().optional(),
+  taxId: zod.string().optional(),
+  notes: zod.string().optional(),
+  isActive: zod.boolean().optional(),
+});
+
+/**
+ * @summary Get supplier with payment history
+ */
+export const GetSupplierParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetSupplierResponse = zod
+  .object({
+    id: zod.number(),
+    name: zod.string(),
+    contactName: zod.string().nullish(),
+    phone: zod.string().nullish(),
+    email: zod.string().nullish(),
+    address: zod.string().nullish(),
+    taxId: zod.string().nullish(),
+    notes: zod.string().nullish(),
+    isActive: zod.boolean(),
+    totalDebt: zod.number(),
+    createdAt: zod.string(),
+  })
+  .and(
+    zod.object({
+      purchases: zod
+        .array(
+          zod.object({
+            id: zod.number(),
+            supplierId: zod.number(),
+            supplierName: zod.string(),
+            invoiceNumber: zod.string().nullish(),
+            purchaseDate: zod.string(),
+            totalAmount: zod.number(),
+            paidAmount: zod.number(),
+            balance: zod.number(),
+            status: zod.enum(["pending", "partial", "paid"]),
+            notes: zod.string().nullish(),
+            items: zod.array(
+              zod.object({
+                id: zod.number(),
+                productId: zod.number(),
+                productName: zod.string().optional(),
+                quantity: zod.number(),
+                purchasePrice: zod.number(),
+                salePrice: zod.number(),
+                margin: zod.number(),
+                expiresAt: zod.string().nullish(),
+              }),
+            ),
+            payments: zod.array(
+              zod.object({
+                id: zod.number(),
+                purchaseId: zod.number(),
+                supplierId: zod.number(),
+                amount: zod.number(),
+                paymentMethodId: zod.number().nullish(),
+                paymentMethodName: zod.string().nullish(),
+                notes: zod.string().nullish(),
+                paidAt: zod.string(),
+                createdAt: zod.string(),
+              }),
+            ),
+            createdAt: zod.string(),
+          }),
+        )
+        .optional(),
+      payments: zod
+        .array(
+          zod.object({
+            id: zod.number(),
+            purchaseId: zod.number(),
+            supplierId: zod.number(),
+            amount: zod.number(),
+            paymentMethodId: zod.number().nullish(),
+            paymentMethodName: zod.string().nullish(),
+            notes: zod.string().nullish(),
+            paidAt: zod.string(),
+            createdAt: zod.string(),
+          }),
+        )
+        .optional(),
+    }),
+  );
+
+/**
+ * @summary Update a supplier (admin)
+ */
+export const UpdateSupplierParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateSupplierBody = zod.object({
+  name: zod.string(),
+  contactName: zod.string().optional(),
+  phone: zod.string().optional(),
+  email: zod.string().optional(),
+  address: zod.string().optional(),
+  taxId: zod.string().optional(),
+  notes: zod.string().optional(),
+  isActive: zod.boolean().optional(),
+});
+
+export const UpdateSupplierResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  contactName: zod.string().nullish(),
+  phone: zod.string().nullish(),
+  email: zod.string().nullish(),
+  address: zod.string().nullish(),
+  taxId: zod.string().nullish(),
+  notes: zod.string().nullish(),
+  isActive: zod.boolean(),
+  totalDebt: zod.number(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Delete a supplier
+ */
+export const DeleteSupplierParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteSupplierResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary List all payment methods (admin)
+ */
+export const GetPaymentMethodsResponseItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  type: zod.enum([
+    "cash",
+    "bank_transfer",
+    "credit_card",
+    "debit_card",
+    "check",
+    "other",
+  ]),
+  isActive: zod.boolean(),
+  createdAt: zod.string(),
+});
+export const GetPaymentMethodsResponse = zod.array(
+  GetPaymentMethodsResponseItem,
+);
+
+/**
+ * @summary Create a payment method (admin)
+ */
+export const CreatePaymentMethodBody = zod.object({
+  name: zod.string(),
+  type: zod.enum([
+    "cash",
+    "bank_transfer",
+    "credit_card",
+    "debit_card",
+    "check",
+    "other",
+  ]),
+  isActive: zod.boolean().optional(),
+});
+
+/**
+ * @summary Update a payment method
+ */
+export const UpdatePaymentMethodParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdatePaymentMethodBody = zod.object({
+  name: zod.string(),
+  type: zod.enum([
+    "cash",
+    "bank_transfer",
+    "credit_card",
+    "debit_card",
+    "check",
+    "other",
+  ]),
+  isActive: zod.boolean().optional(),
+});
+
+export const UpdatePaymentMethodResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  type: zod.enum([
+    "cash",
+    "bank_transfer",
+    "credit_card",
+    "debit_card",
+    "check",
+    "other",
+  ]),
+  isActive: zod.boolean(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Delete a payment method
+ */
+export const DeletePaymentMethodParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeletePaymentMethodResponse = zod.object({
+  message: zod.string(),
+});
+
+/**
+ * @summary List all purchases (admin)
+ */
+export const GetPurchasesQueryParams = zod.object({
+  supplierId: zod.coerce.number().optional(),
+  status: zod.coerce.string().optional(),
+});
+
+export const GetPurchasesResponseItem = zod.object({
+  id: zod.number(),
+  supplierId: zod.number(),
+  supplierName: zod.string(),
+  invoiceNumber: zod.string().nullish(),
+  purchaseDate: zod.string(),
+  totalAmount: zod.number(),
+  paidAmount: zod.number(),
+  balance: zod.number(),
+  status: zod.enum(["pending", "partial", "paid"]),
+  notes: zod.string().nullish(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      productId: zod.number(),
+      productName: zod.string().optional(),
+      quantity: zod.number(),
+      purchasePrice: zod.number(),
+      salePrice: zod.number(),
+      margin: zod.number(),
+      expiresAt: zod.string().nullish(),
+    }),
+  ),
+  payments: zod.array(
+    zod.object({
+      id: zod.number(),
+      purchaseId: zod.number(),
+      supplierId: zod.number(),
+      amount: zod.number(),
+      paymentMethodId: zod.number().nullish(),
+      paymentMethodName: zod.string().nullish(),
+      notes: zod.string().nullish(),
+      paidAt: zod.string(),
+      createdAt: zod.string(),
+    }),
+  ),
+  createdAt: zod.string(),
+});
+export const GetPurchasesResponse = zod.array(GetPurchasesResponseItem);
+
+/**
+ * @summary Create a purchase (admin)
+ */
+export const CreatePurchaseBody = zod.object({
+  supplierId: zod.number(),
+  invoiceNumber: zod.string().optional(),
+  purchaseDate: zod.string().optional(),
+  notes: zod.string().optional(),
+  initialPaymentAmount: zod.number().optional(),
+  paymentMethodId: zod.number().optional(),
+  items: zod.array(
+    zod.object({
+      productId: zod.number(),
+      quantity: zod.number(),
+      purchasePrice: zod.number(),
+      salePrice: zod.number(),
+      expiresAt: zod.string().optional(),
+    }),
+  ),
+});
+
+/**
+ * @summary Get purchase with items and payments
+ */
+export const GetPurchaseParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetPurchaseResponse = zod.object({
+  id: zod.number(),
+  supplierId: zod.number(),
+  supplierName: zod.string(),
+  invoiceNumber: zod.string().nullish(),
+  purchaseDate: zod.string(),
+  totalAmount: zod.number(),
+  paidAmount: zod.number(),
+  balance: zod.number(),
+  status: zod.enum(["pending", "partial", "paid"]),
+  notes: zod.string().nullish(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      productId: zod.number(),
+      productName: zod.string().optional(),
+      quantity: zod.number(),
+      purchasePrice: zod.number(),
+      salePrice: zod.number(),
+      margin: zod.number(),
+      expiresAt: zod.string().nullish(),
+    }),
+  ),
+  payments: zod.array(
+    zod.object({
+      id: zod.number(),
+      purchaseId: zod.number(),
+      supplierId: zod.number(),
+      amount: zod.number(),
+      paymentMethodId: zod.number().nullish(),
+      paymentMethodName: zod.string().nullish(),
+      notes: zod.string().nullish(),
+      paidAt: zod.string(),
+      createdAt: zod.string(),
+    }),
+  ),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Update a purchase (admin)
+ */
+export const UpdatePurchaseParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdatePurchaseBody = zod.object({
+  invoiceNumber: zod.string().optional(),
+  purchaseDate: zod.string().optional(),
+  notes: zod.string().optional(),
+  status: zod.enum(["pending", "partial", "paid"]).optional(),
+});
+
+export const UpdatePurchaseResponse = zod.object({
+  id: zod.number(),
+  supplierId: zod.number(),
+  supplierName: zod.string(),
+  invoiceNumber: zod.string().nullish(),
+  purchaseDate: zod.string(),
+  totalAmount: zod.number(),
+  paidAmount: zod.number(),
+  balance: zod.number(),
+  status: zod.enum(["pending", "partial", "paid"]),
+  notes: zod.string().nullish(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      productId: zod.number(),
+      productName: zod.string().optional(),
+      quantity: zod.number(),
+      purchasePrice: zod.number(),
+      salePrice: zod.number(),
+      margin: zod.number(),
+      expiresAt: zod.string().nullish(),
+    }),
+  ),
+  payments: zod.array(
+    zod.object({
+      id: zod.number(),
+      purchaseId: zod.number(),
+      supplierId: zod.number(),
+      amount: zod.number(),
+      paymentMethodId: zod.number().nullish(),
+      paymentMethodName: zod.string().nullish(),
+      notes: zod.string().nullish(),
+      paidAt: zod.string(),
+      createdAt: zod.string(),
+    }),
+  ),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Add a payment to a purchase
+ */
+export const AddSupplierPaymentParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AddSupplierPaymentBody = zod.object({
+  amount: zod.number(),
+  paymentMethodId: zod.number().optional(),
+  notes: zod.string().optional(),
 });

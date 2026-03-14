@@ -3,3 +3,7 @@ export * from "./categories";
 export * from "./products";
 export * from "./orders";
 export * from "./discounts";
+export * from "./offers";
+export * from "./suppliers";
+export * from "./payment-methods";
+export * from "./purchases";

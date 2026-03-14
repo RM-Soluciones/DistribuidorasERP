@@ -257,7 +257,232 @@ export interface AdminStats {
   totalProducts: number;
   totalUsers: number;
   pendingOrders: number;
-  recentOrders: Order[];
+  recentOrders?: Order[];
+}
+
+export interface OfferProduct {
+  productId: number;
+  productName?: string;
+  minQuantity: number;
+}
+
+export type OfferType = (typeof OfferType)[keyof typeof OfferType];
+
+export const OfferType = {
+  percentage: "percentage",
+  fixed_amount: "fixed_amount",
+  bundle_price: "bundle_price",
+} as const;
+
+export interface Offer {
+  id: number;
+  name: string;
+  description?: string | null;
+  type: OfferType;
+  value: number;
+  minTotalQuantity?: number | null;
+  isActive: boolean;
+  expiresAt?: string | null;
+  products: OfferProduct[];
+  createdAt: string;
+}
+
+export type CreateOfferRequestType =
+  (typeof CreateOfferRequestType)[keyof typeof CreateOfferRequestType];
+
+export const CreateOfferRequestType = {
+  percentage: "percentage",
+  fixed_amount: "fixed_amount",
+  bundle_price: "bundle_price",
+} as const;
+
+export type CreateOfferRequestProductsItem = {
+  productId: number;
+  minQuantity: number;
+};
+
+export interface CreateOfferRequest {
+  name: string;
+  description?: string;
+  type: CreateOfferRequestType;
+  value: number;
+  minTotalQuantity?: number;
+  isActive?: boolean;
+  expiresAt?: string;
+  products: CreateOfferRequestProductsItem[];
+}
+
+export type CheckOffersRequestItemsItem = {
+  productId: number;
+  quantity: number;
+};
+
+export interface CheckOffersRequest {
+  items: CheckOffersRequestItemsItem[];
+}
+
+export interface ApplicableOffer {
+  offerId: number;
+  offerName: string;
+  offerType: string;
+  discountAmount: number;
+  description?: string;
+}
+
+export interface Supplier {
+  id: number;
+  name: string;
+  contactName?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  taxId?: string | null;
+  notes?: string | null;
+  isActive: boolean;
+  totalDebt: number;
+  createdAt: string;
+}
+
+export type PurchaseStatus =
+  (typeof PurchaseStatus)[keyof typeof PurchaseStatus];
+
+export const PurchaseStatus = {
+  pending: "pending",
+  partial: "partial",
+  paid: "paid",
+} as const;
+
+export interface PurchaseItem {
+  id: number;
+  productId: number;
+  productName?: string;
+  quantity: number;
+  purchasePrice: number;
+  salePrice: number;
+  margin: number;
+  expiresAt?: string | null;
+}
+
+export interface SupplierPayment {
+  id: number;
+  purchaseId: number;
+  supplierId: number;
+  amount: number;
+  paymentMethodId?: number | null;
+  paymentMethodName?: string | null;
+  notes?: string | null;
+  paidAt: string;
+  createdAt: string;
+}
+
+export interface Purchase {
+  id: number;
+  supplierId: number;
+  supplierName: string;
+  invoiceNumber?: string | null;
+  purchaseDate: string;
+  totalAmount: number;
+  paidAmount: number;
+  balance: number;
+  status: PurchaseStatus;
+  notes?: string | null;
+  items: PurchaseItem[];
+  payments: SupplierPayment[];
+  createdAt: string;
+}
+
+export type SupplierDetail = Supplier & {
+  purchases?: Purchase[];
+  payments?: SupplierPayment[];
+};
+
+export interface CreateSupplierRequest {
+  name: string;
+  contactName?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  taxId?: string;
+  notes?: string;
+  isActive?: boolean;
+}
+
+export type PaymentMethodType =
+  (typeof PaymentMethodType)[keyof typeof PaymentMethodType];
+
+export const PaymentMethodType = {
+  cash: "cash",
+  bank_transfer: "bank_transfer",
+  credit_card: "credit_card",
+  debit_card: "debit_card",
+  check: "check",
+  other: "other",
+} as const;
+
+export interface PaymentMethod {
+  id: number;
+  name: string;
+  type: PaymentMethodType;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export type CreatePaymentMethodRequestType =
+  (typeof CreatePaymentMethodRequestType)[keyof typeof CreatePaymentMethodRequestType];
+
+export const CreatePaymentMethodRequestType = {
+  cash: "cash",
+  bank_transfer: "bank_transfer",
+  credit_card: "credit_card",
+  debit_card: "debit_card",
+  check: "check",
+  other: "other",
+} as const;
+
+export interface CreatePaymentMethodRequest {
+  name: string;
+  type: CreatePaymentMethodRequestType;
+  isActive?: boolean;
+}
+
+export type CreatePurchaseRequestItemsItem = {
+  productId: number;
+  quantity: number;
+  purchasePrice: number;
+  salePrice: number;
+  expiresAt?: string;
+};
+
+export interface CreatePurchaseRequest {
+  supplierId: number;
+  invoiceNumber?: string;
+  purchaseDate?: string;
+  notes?: string;
+  initialPaymentAmount?: number;
+  paymentMethodId?: number;
+  items: CreatePurchaseRequestItemsItem[];
+}
+
+export type UpdatePurchaseRequestStatus =
+  (typeof UpdatePurchaseRequestStatus)[keyof typeof UpdatePurchaseRequestStatus];
+
+export const UpdatePurchaseRequestStatus = {
+  pending: "pending",
+  partial: "partial",
+  paid: "paid",
+} as const;
+
+export interface UpdatePurchaseRequest {
+  invoiceNumber?: string;
+  purchaseDate?: string;
+  notes?: string;
+  status?: UpdatePurchaseRequestStatus;
+}
+
+export interface AddPaymentRequest {
+  amount: number;
+  paymentMethodId?: number;
+  notes?: string;
 }
 
 export type GetProductsParams = {
@@ -288,4 +513,9 @@ export const GetOrdersStatus = {
 export type GetUsersParams = {
   page?: number;
   limit?: number;
+};
+
+export type GetPurchasesParams = {
+  supplierId?: number;
+  status?: string;
 };

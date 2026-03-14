@@ -20,7 +20,12 @@ import AdminOrders from "./pages/admin/Orders";
 import AdminCategories from "./pages/admin/Categories";
 import AdminUsers from "./pages/admin/Users";
 import AdminDiscounts from "./pages/admin/Discounts";
+import AdminOffers from "./pages/admin/Offers";
 import AdminPOS from "./pages/admin/POS";
+import AdminSuppliers from "./pages/admin/Suppliers";
+import SupplierDetail from "./pages/admin/SupplierDetail";
+import AdminPurchases from "./pages/admin/Purchases";
+import AdminPaymentMethods from "./pages/admin/PaymentMethods";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -44,6 +49,11 @@ function Router() {
       <Route path="/admin/orders" component={AdminOrders} />
       <Route path="/admin/categories" component={AdminCategories} />
       <Route path="/admin/discounts" component={AdminDiscounts} />
+      <Route path="/admin/offers" component={AdminOffers} />
+      <Route path="/admin/suppliers/:id" component={SupplierDetail} />
+      <Route path="/admin/suppliers" component={AdminSuppliers} />
+      <Route path="/admin/purchases" component={AdminPurchases} />
+      <Route path="/admin/payment-methods" component={AdminPaymentMethods} />
       <Route path="/admin/users" component={AdminUsers} />
       <Route component={NotFound} />
     </Switch>
