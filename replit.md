@@ -4,6 +4,16 @@
 
 Full-stack distributor company web app. Public storefront + private admin ERP panel.
 
+## Features Implemented
+
+- Public storefront: product catalog, category filtering, product detail, shopping cart, checkout with discount code support
+- Customer area: registration, login, order history/dashboard
+- Admin ERP panel: Dashboard, Products (with expiry dates), Orders (with detail dialog), Categories, Users, Discounts/Offers, POS (Point of Sale)
+- Discount system: admin CRUD for promo codes, public `/discounts/validate` endpoint, applied to online orders + POS sales
+- POS module: `/admin/pos` — in-person sales with product browser, category tabs, cart, discount codes, customer name, receipt view
+- Product expiry dates: `expiresAt` field on products, warning banners in admin for expiring/expired items
+- Order detail dialog in admin Orders page showing all line items, discount breakdown, POS badge
+
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces

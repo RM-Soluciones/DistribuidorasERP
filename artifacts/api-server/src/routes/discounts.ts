@@ -2,8 +2,6 @@ import { Router } from "express";
 import { db, discountsTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
-const router = Router();
-
 async function requireAdmin(req: any, res: any): Promise<boolean> {
   const userId = req.session?.userId;
   if (!userId) { res.status(401).json({ error: "Not authenticated" }); return false; }
@@ -28,10 +26,12 @@ function formatDiscount(d: any) {
   };
 }
 
-// Validate discount code (public - used in cart)
-router.post("/validate", async (req, res) => {
+// Public router — mounted at /discounts
+export const publicDiscountsRouter = Router();
+
+publicDiscountsRouter.post("/validate", async (req, res) => {
   const { code, orderAmount } = req.body;
-  if (!code) { res.json({ valid: false, discountAmount: 0, message: "No code provided" }); return; }
+  if (!code) { res.json({ valid: false, discountAmount: 0, message: "No se proporcionó código" }); return; }
 
   const [discount] = await db.select().from(discountsTable).where(eq(discountsTable.code, code.toUpperCase())).limit(1);
 
@@ -55,21 +55,28 @@ router.post("/validate", async (req, res) => {
     discountAmount = Math.min(parseFloat(discount.value as string), orderAmount);
   }
 
-  res.json({ valid: true, discount: formatDiscount(discount), discountAmount: parseFloat(discountAmount.toFixed(2)), message: `Descuento aplicado: -$${discountAmount.toFixed(2)}` });
+  res.json({
+    valid: true,
+    discount: formatDiscount(discount),
+    discountAmount: parseFloat(discountAmount.toFixed(2)),
+    message: `Descuento aplicado: -$${discountAmount.toFixed(2)}`,
+  });
 });
 
-// Admin discount CRUD
-router.get("/", async (req, res) => {
+// Admin router — mounted at /admin/discounts
+export const adminDiscountsRouter = Router();
+
+adminDiscountsRouter.get("/", async (req, res) => {
   if (!(await requireAdmin(req, res))) return;
   const discounts = await db.select().from(discountsTable).orderBy(discountsTable.createdAt);
   res.json(discounts.map(formatDiscount));
 });
 
-router.post("/", async (req, res) => {
+adminDiscountsRouter.post("/", async (req, res) => {
   if (!(await requireAdmin(req, res))) return;
   const { code, name, type, value, minOrderAmount, maxUses, isActive, expiresAt } = req.body;
   if (!code || !name || !type || value === undefined) {
-    res.status(400).json({ error: "Code, name, type and value are required" }); return;
+    res.status(400).json({ error: "Código, nombre, tipo y valor son obligatorios" }); return;
   }
   const [discount] = await db.insert(discountsTable).values({
     code: code.toUpperCase(),
@@ -84,30 +91,28 @@ router.post("/", async (req, res) => {
   res.status(201).json(formatDiscount(discount));
 });
 
-router.put("/:id", async (req, res) => {
+adminDiscountsRouter.put("/:id", async (req, res) => {
   if (!(await requireAdmin(req, res))) return;
   const id = parseInt(req.params.id);
   const { code, name, type, value, minOrderAmount, maxUses, isActive, expiresAt } = req.body;
   const [discount] = await db.update(discountsTable).set({
-    code: code?.toUpperCase(),
-    name,
-    type,
-    value: value?.toString(),
+    ...(code && { code: code.toUpperCase() }),
+    ...(name && { name }),
+    ...(type && { type }),
+    ...(value !== undefined && { value: value.toString() }),
     minOrderAmount: minOrderAmount ? minOrderAmount.toString() : null,
     maxUses: maxUses || null,
-    isActive,
+    ...(isActive !== undefined && { isActive }),
     expiresAt: expiresAt ? new Date(expiresAt) : null,
     updatedAt: new Date(),
   }).where(eq(discountsTable.id, id)).returning();
-  if (!discount) { res.status(404).json({ error: "Discount not found" }); return; }
+  if (!discount) { res.status(404).json({ error: "Descuento no encontrado" }); return; }
   res.json(formatDiscount(discount));
 });
 
-router.delete("/:id", async (req, res) => {
+adminDiscountsRouter.delete("/:id", async (req, res) => {
   if (!(await requireAdmin(req, res))) return;
   const id = parseInt(req.params.id);
   await db.delete(discountsTable).where(eq(discountsTable.id, id));
-  res.json({ message: "Discount deleted" });
+  res.json({ message: "Descuento eliminado" });
 });
-
-export default router;
