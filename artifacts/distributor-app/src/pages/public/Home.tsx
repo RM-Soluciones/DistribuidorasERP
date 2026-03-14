@@ -2,12 +2,12 @@ import { Link } from "wouter";
 import { ArrowRight, Truck, ShieldCheck, Box, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { useGetProducts, useGetCategories } from "@workspace/api-client-react";
+import { useProducts, useCategories } from "@/lib/supabase-hooks";
 import { ProductCard } from "@/components/ui/ProductCard";
 
 export default function Home() {
-  const { data: productsData } = useGetProducts({ limit: 4 });
-  const { data: categories } = useGetCategories();
+  const { data: productsData } = useProducts({ limit: 4 });
+  const { data: categories } = useCategories();
 
   return (
     <MainLayout>

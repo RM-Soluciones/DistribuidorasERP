@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
-import { ShoppingCart, User, LogOut, Package, LayoutDashboard, ChevronDown } from "lucide-react";
+import { ShoppingCart, LogOut, Package, LayoutDashboard, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useGetMe, useLogout } from "@workspace/api-client-react";
+import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/hooks/use-cart";
 import {
   DropdownMenu,
@@ -11,22 +11,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useQueryClient } from "@tanstack/react-query";
 
 export function Navbar() {
-  const [location, setLocation] = useLocation();
-  const { data: user, isLoading } = useGetMe({ query: { retry: false } });
-  const { mutate: logout } = useLogout();
+  const [, setLocation] = useLocation();
+  const { profile: user, loading: isLoading, signOut } = useAuth();
   const cartCount = useCart((state) => state.getCartCount());
-  const queryClient = useQueryClient();
 
-  const handleLogout = () => {
-    logout(undefined, {
-      onSuccess: () => {
-        queryClient.setQueryData([`/api/auth/me`], null);
-        setLocation("/login");
-      }
-    });
+  const handleLogout = async () => {
+    await signOut();
+    setLocation("/login");
   };
 
   return (

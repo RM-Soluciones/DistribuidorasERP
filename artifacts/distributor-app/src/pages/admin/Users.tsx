@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useGetUsers, useCreateAdminUser, useDeleteAdminUser } from "@workspace/api-client-react";
+import { useUsers, useCreateAdminUser, useDeleteAdminUser } from "@/lib/supabase-hooks";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { UserPlus, Trash2, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AdminUsers() {
-  const { data: usersData, isLoading, refetch } = useGetUsers({ limit: 100 });
+  const { data: usersData, isLoading, refetch } = useUsers({ limit: 100 });
   const { mutateAsync: createAdmin, isPending: isCreating } = useCreateAdminUser();
   const { mutateAsync: deleteUser } = useDeleteAdminUser();
   const { toast } = useToast();

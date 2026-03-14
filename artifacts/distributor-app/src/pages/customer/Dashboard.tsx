@@ -1,5 +1,6 @@
 import { MainLayout } from "@/components/layout/MainLayout";
-import { useGetMe, useGetOrders } from "@workspace/api-client-react";
+import { useOrders } from "@/lib/supabase-hooks";
+import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
 import { Loader2, Package, Clock, CheckCircle, XCircle, FileText } from "lucide-react";
@@ -8,8 +9,8 @@ import { format } from "date-fns";
 
 export default function CustomerDashboard() {
   const [, setLocation] = useLocation();
-  const { data: user, isLoading: userLoading } = useGetMe({ query: { retry: false } });
-  const { data: ordersData, isLoading: ordersLoading } = useGetOrders({ limit: 100 });
+  const { profile: user, loading: userLoading } = useAuth();
+  const { data: ordersData, isLoading: ordersLoading } = useOrders({ limit: 100 });
 
   useEffect(() => {
     if (!userLoading && !user) {

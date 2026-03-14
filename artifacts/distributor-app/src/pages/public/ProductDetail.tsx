@@ -1,6 +1,6 @@
 import { useParams } from "wouter";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { useGetProduct } from "@workspace/api-client-react";
+import { useProduct } from "@/lib/supabase-hooks";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Package, ChevronLeft, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 
 export default function ProductDetail() {
   const { id } = useParams();
-  const { data: product, isLoading, error } = useGetProduct(Number(id));
+  const { data: product, isLoading, error } = useProduct(Number(id));
   const [quantity, setQuantity] = useState(1);
   const addItem = useCart(state => state.addItem);
   const { toast } = useToast();

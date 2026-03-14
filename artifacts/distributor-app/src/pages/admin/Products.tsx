@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useGetProducts, useDeleteProduct, useCreateProduct, useUpdateProduct, useGetCategories, Product } from "@workspace/api-client-react";
+import { useProducts, useDeleteProduct, useCreateProduct, useUpdateProduct, useCategories, Product } from "@/lib/supabase-hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -26,8 +26,8 @@ function ExpiryBadge({ expiresAt }: { expiresAt?: string | null }) {
 
 export default function AdminProducts() {
   const [search, setSearch] = useState("");
-  const { data: productsData, isLoading } = useGetProducts({ search, limit: 100 });
-  const { data: categories } = useGetCategories();
+  const { data: productsData, isLoading } = useProducts({ search, limit: 100 });
+  const { data: categories } = useCategories();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);

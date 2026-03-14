@@ -4,42 +4,38 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useLogin } from "@workspace/api-client-react";
+import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowRight, Box } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { ArrowRight } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { mutate: login, isPending } = useLogin();
+  const [isPending, setIsPending] = useState(false);
+  const { signIn, profile } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const queryClient = useQueryClient();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    login(
-      { data: { email, password } },
-      {
-        onSuccess: (data) => {
-          queryClient.setQueryData([`/api/auth/me`], data.user);
-          toast({ title: "Welcome back!", description: "Successfully logged in." });
-          if (data.user.role === 'admin') {
-            setLocation("/admin");
-          } else {
-            setLocation("/customer/dashboard");
-          }
-        },
-        onError: (err) => {
-          toast({ 
-            title: "Login Failed", 
-            description: err.message || "Invalid credentials. Please try again.", 
-            variant: "destructive" 
-          });
-        }
+    setIsPending(true);
+    try {
+      const p = await signIn(email, password);
+      toast({ title: "Welcome back!", description: "Successfully logged in." });
+      if (p?.role === "admin") {
+        setLocation("/admin");
+      } else {
+        setLocation("/customer/dashboard");
       }
-    );
+    } catch (err: any) {
+      toast({
+        title: "Login Failed",
+        description: err.message || "Invalid credentials. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (

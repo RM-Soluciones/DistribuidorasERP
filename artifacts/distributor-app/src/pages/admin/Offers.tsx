@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useGetOffers, useCreateOffer, useUpdateOffer, useDeleteOffer, useGetProducts } from "@workspace/api-client-react";
+import { useOffers, useCreateOffer, useUpdateOffer, useDeleteOffer, useProducts } from "@/lib/supabase-hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,11 +28,11 @@ const emptyForm = {
 };
 
 export default function AdminOffers() {
-  const { data: offers, isLoading, refetch } = useGetOffers();
+  const { data: offers, isLoading, refetch } = useOffers();
   const { mutateAsync: createOffer, isPending: isCreating } = useCreateOffer();
   const { mutateAsync: updateOffer, isPending: isUpdating } = useUpdateOffer();
   const { mutateAsync: deleteOffer } = useDeleteOffer();
-  const { data: productsData } = useGetProducts({ limit: 200 });
+  const { data: productsData } = useProducts({ limit: 200 });
   const { toast } = useToast();
 
   const [open, setOpen] = useState(false);

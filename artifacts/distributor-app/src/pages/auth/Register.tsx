@@ -4,39 +4,35 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useRegister } from "@workspace/api-client-react";
+import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowRight } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
 
 export default function Register() {
   const [formData, setFormData] = useState({
     name: "", email: "", password: "", phone: "", address: ""
   });
-  const { mutate: register, isPending } = useRegister();
+  const [isPending, setIsPending] = useState(false);
+  const { signUp } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const queryClient = useQueryClient();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    register(
-      { data: formData },
-      {
-        onSuccess: (data) => {
-          queryClient.setQueryData([`/api/auth/me`], data.user);
-          toast({ title: "Account Created", description: "Welcome to DistriPro!" });
-          setLocation("/customer/dashboard");
-        },
-        onError: (err) => {
-          toast({ 
-            title: "Registration Failed", 
-            description: err.message || "An error occurred during registration.", 
-            variant: "destructive" 
-          });
-        }
-      }
-    );
+    setIsPending(true);
+    try {
+      await signUp(formData);
+      toast({ title: "Account Created", description: "Welcome to DistriPro!" });
+      setLocation("/customer/dashboard");
+    } catch (err: any) {
+      toast({
+        title: "Registration Failed",
+        description: err.message || "An error occurred during registration.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (

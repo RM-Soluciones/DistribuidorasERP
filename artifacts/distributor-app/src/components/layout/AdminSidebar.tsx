@@ -4,8 +4,7 @@ import {
   Tag, Monitor, Gift, Truck, ShoppingBag, CreditCard, ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLogout } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth-context";
 
 const navSections = [
   {
@@ -43,16 +42,11 @@ const navSections = [
 
 export function AdminSidebar() {
   const [location, setLocation] = useLocation();
-  const { mutate: logout } = useLogout();
-  const queryClient = useQueryClient();
+  const { signOut } = useAuth();
 
-  const handleLogout = () => {
-    logout(undefined, {
-      onSuccess: () => {
-        queryClient.setQueryData([`/api/auth/me`], null);
-        setLocation("/login");
-      },
-    });
+  const handleLogout = async () => {
+    await signOut();
+    setLocation("/login");
   };
 
   const isActive = (href: string, exact?: boolean) =>

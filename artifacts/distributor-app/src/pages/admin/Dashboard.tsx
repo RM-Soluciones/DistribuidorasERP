@@ -1,5 +1,5 @@
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useGetAdminStats } from "@workspace/api-client-react";
+import { useAdminStats } from "@/lib/supabase-hooks";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, ShoppingCart, Users, Package, Clock } from "lucide-react";
 import { format } from "date-fns";
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
 export default function AdminDashboard() {
-  const { data: stats, isLoading } = useGetAdminStats();
+  const { data: stats, isLoading } = useAdminStats();
 
   if (isLoading) {
     return <AdminLayout><div className="animate-pulse flex space-x-4"><div className="flex-1 space-y-4 py-1"><div className="h-4 bg-slate-200 rounded w-3/4"></div></div></div></AdminLayout>;
@@ -80,7 +80,7 @@ export default function AdminDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats.totalUsers}</div>
+            <div className="text-3xl font-bold">{stats.totalCustomers}</div>
           </CardContent>
         </Card>
       </div>

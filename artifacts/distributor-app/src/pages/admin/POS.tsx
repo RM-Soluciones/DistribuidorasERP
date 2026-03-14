@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useGetProducts, useGetCategories, useValidateDiscount } from "@workspace/api-client-react";
+import { useProducts, useCategories, useValidateDiscount, useCreatePOSSale } from "@/lib/supabase-hooks";
+import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -25,9 +26,11 @@ export default function AdminPOS() {
   const [lastSale, setLastSale] = useState<any>(null);
   const { toast } = useToast();
 
-  const { data: productsData } = useGetProducts({ search, categoryId, limit: 50 });
-  const { data: categories } = useGetCategories();
+  const { profile } = useAuth();
+  const { data: productsData } = useProducts({ search, categoryId, limit: 50 });
+  const { data: categories } = useCategories();
   const { mutateAsync: validateDiscount } = useValidateDiscount();
+  const { mutateAsync: createPOSSale } = useCreatePOSSale();
 
   const subtotal = cart.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
   const discountAmount = appliedDiscount?.amount || 0;
@@ -75,21 +78,16 @@ export default function AdminPOS() {
 
   const handleProcessSale = async () => {
     if (cart.length === 0) { toast({ title: "Carrito vacío", variant: "destructive" }); return; }
+    if (!profile) { toast({ title: "No autenticado", variant: "destructive" }); return; }
     setIsProcessing(true);
     try {
-      const res = await fetch("/api/admin/pos/sale", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          items: cart.map(i => ({ productId: i.productId, quantity: i.quantity })),
-          discountCode: appliedDiscount?.code || undefined,
-          customerName: customerName || undefined,
-          notes: notes || undefined,
-        }),
+      const sale = await createPOSSale({
+        userId: profile.id,
+        customerName: customerName || undefined,
+        notes: notes || undefined,
+        discountCode: appliedDiscount?.code || undefined,
+        items: cart,
       });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
-      const sale = await res.json();
       setLastSale(sale);
       setCart([]);
       setCustomerName("");

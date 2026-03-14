@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useGetOrders, useUpdateOrderStatus, OrderStatus } from "@workspace/api-client-react";
+import { useOrders, useUpdateOrderStatus, OrderStatus } from "@/lib/supabase-hooks";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function AdminOrders() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const { data: ordersData, isLoading } = useGetOrders({
+  const { data: ordersData, isLoading } = useOrders({
     limit: 100,
     status: statusFilter !== "all" ? (statusFilter as OrderStatus) : undefined,
   });

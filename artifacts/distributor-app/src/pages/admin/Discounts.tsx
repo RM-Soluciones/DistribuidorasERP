@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useGetDiscounts, useCreateDiscount, useUpdateDiscount, useDeleteDiscount } from "@workspace/api-client-react";
+import { useDiscounts, useCreateDiscount, useUpdateDiscount, useDeleteDiscount } from "@/lib/supabase-hooks";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 const emptyForm = { code: "", name: "", type: "percentage" as "percentage" | "fixed", value: "", minOrderAmount: "", maxUses: "", isActive: true, expiresAt: "" };
 
 export default function AdminDiscounts() {
-  const { data: discounts, isLoading, refetch } = useGetDiscounts();
+  const { data: discounts, isLoading, refetch } = useDiscounts();
   const { mutateAsync: createDiscount, isPending: isCreating } = useCreateDiscount();
   const { mutateAsync: updateDiscount, isPending: isUpdating } = useUpdateDiscount();
   const { mutateAsync: deleteDiscount } = useDeleteDiscount();

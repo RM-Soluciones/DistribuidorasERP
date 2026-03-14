@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { useGetProducts, useGetCategories } from "@workspace/api-client-react";
+import { useProducts, useCategories } from "@/lib/supabase-hooks";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2 } from "lucide-react";
@@ -14,8 +14,8 @@ export default function Products() {
   // Simple debouncing for search
   const [debouncedSearch, setDebouncedSearch] = useState("");
   
-  const { data: categories } = useGetCategories();
-  const { data: productsData, isLoading } = useGetProducts({
+  const { data: categories } = useCategories();
+  const { data: productsData, isLoading } = useProducts({
     search: debouncedSearch || undefined,
     categoryId: selectedCategory,
     limit: 50

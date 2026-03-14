@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useRoute } from "wouter";
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useGetSupplier, useGetPaymentMethods, useAddSupplierPayment } from "@workspace/api-client-react";
+import { useSupplier, usePaymentMethods, useAddSupplierPayment } from "@/lib/supabase-hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,8 +22,8 @@ const STATUS_COLORS: Record<string, string> = {
 export default function SupplierDetail() {
   const [, params] = useRoute("/admin/suppliers/:id");
   const id = parseInt(params?.id || "0");
-  const { data: supplier, isLoading, refetch } = useGetSupplier(id) as any;
-  const { data: paymentMethods } = useGetPaymentMethods();
+  const { data: supplier, isLoading, refetch } = useSupplier(id) as any;
+  const { data: paymentMethods } = usePaymentMethods();
   const { mutateAsync: addPayment, isPending } = useAddSupplierPayment();
   const { toast } = useToast();
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useGetPaymentMethods, useCreatePaymentMethod, useUpdatePaymentMethod, useDeletePaymentMethod } from "@workspace/api-client-react";
+import { usePaymentMethods, useCreatePaymentMethod, useUpdatePaymentMethod, useDeletePaymentMethod } from "@/lib/supabase-hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +25,7 @@ const TYPE_ICONS: Record<string, any> = {
 const emptyForm = { name: "", type: "cash" as any, isActive: true };
 
 export default function AdminPaymentMethods() {
-  const { data: methods, isLoading, refetch } = useGetPaymentMethods();
+  const { data: methods, isLoading, refetch } = usePaymentMethods();
   const { mutateAsync: createMethod, isPending: isCreating } = useCreatePaymentMethod();
   const { mutateAsync: updateMethod, isPending: isUpdating } = useUpdatePaymentMethod();
   const { mutateAsync: deleteMethod } = useDeletePaymentMethod();

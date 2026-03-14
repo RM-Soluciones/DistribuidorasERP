@@ -1,21 +1,21 @@
 import { Navbar } from "./Navbar";
 import { AdminSidebar } from "./AdminSidebar";
-import { useGetMe } from "@workspace/api-client-react";
+import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [, setLocation] = useLocation();
-  const { data: user, isLoading } = useGetMe({ query: { retry: false } });
+  const { profile, loading } = useAuth();
 
   useEffect(() => {
-    if (!isLoading && (!user || user.role !== 'admin')) {
+    if (!loading && (!profile || profile.role !== "admin")) {
       setLocation("/login");
     }
-  }, [user, isLoading, setLocation]);
+  }, [profile, loading, setLocation]);
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -23,8 +23,8 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user || user.role !== 'admin') {
-    return null; // Will redirect
+  if (!profile || profile.role !== "admin") {
+    return null;
   }
 
   return (

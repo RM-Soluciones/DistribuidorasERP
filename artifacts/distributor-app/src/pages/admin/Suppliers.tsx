@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useGetSuppliers, useCreateSupplier, useUpdateSupplier, useDeleteSupplier } from "@workspace/api-client-react";
+import { useSuppliers, useCreateSupplier, useUpdateSupplier, useDeleteSupplier } from "@/lib/supabase-hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 const emptyForm = { name: "", contactName: "", phone: "", email: "", address: "", taxId: "", notes: "", isActive: true };
 
 export default function AdminSuppliers() {
-  const { data: suppliers, isLoading, refetch } = useGetSuppliers();
+  const { data: suppliers, isLoading, refetch } = useSuppliers();
   const { mutateAsync: createSupplier, isPending: isCreating } = useCreateSupplier();
   const { mutateAsync: updateSupplier, isPending: isUpdating } = useUpdateSupplier();
   const { mutateAsync: deleteSupplier } = useDeleteSupplier();

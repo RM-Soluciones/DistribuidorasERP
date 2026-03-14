@@ -50,3 +50,5 @@ timeoutMs = 20000
 
 [userenv.shared]
 DATABASE_URL = "postgresql://postgres.ljolohtaxdeaenwszojr:rmsoluciones.io@aws-0-us-west-2.pooler.supabase.com:6543/postgres"
+VITE_SUPABASE_URL = "https://ljolohtaxdeaenwszojr.supabase.co"
+VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxqb2xvaHRheGRlYWVud3N6b2pyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTEyMDcsImV4cCI6MjA4OTA2NzIwN30.pskPd8Q9DHzJl7Rb65JNKGDBe9-nCKbUoH_Me53o6NE"

@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { ShoppingCart, Eye, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Product } from "@workspace/api-client-react";
+import { Product } from "@/lib/supabase-hooks";
 import { useCart } from "@/hooks/use-cart";
 import { useToast } from "@/hooks/use-toast";
 

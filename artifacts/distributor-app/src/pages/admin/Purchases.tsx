@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useGetPurchases, useCreatePurchase, useGetSuppliers, useGetProducts, useGetPaymentMethods, useAddSupplierPayment } from "@workspace/api-client-react";
+import { usePurchases, useCreatePurchase, useSuppliers, useProducts, usePaymentMethods, useAddSupplierPayment } from "@/lib/supabase-hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,10 +24,10 @@ const STATUS_COLORS: Record<string, string> = {
 type PurchaseItemRow = { productId: number; productName: string; quantity: number; purchasePrice: number; salePrice: number; expiresAt: string; };
 
 export default function AdminPurchases() {
-  const { data: purchases, isLoading, refetch } = useGetPurchases({});
-  const { data: suppliers } = useGetSuppliers();
-  const { data: productsData } = useGetProducts({ limit: 200 });
-  const { data: paymentMethods } = useGetPaymentMethods();
+  const { data: purchases, isLoading, refetch } = usePurchases({});
+  const { data: suppliers } = useSuppliers();
+  const { data: productsData } = useProducts({ limit: 200 });
+  const { data: paymentMethods } = usePaymentMethods();
   const { mutateAsync: createPurchase, isPending: isCreating } = useCreatePurchase();
   const { mutateAsync: addPayment, isPending: isPaymentPending } = useAddSupplierPayment();
   const { toast } = useToast();

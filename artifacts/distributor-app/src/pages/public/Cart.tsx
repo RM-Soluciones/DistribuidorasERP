@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Trash2, ArrowRight, Package, AlertCircle, Tag, CheckCircle } from "lucide-react";
-import { useCreateOrder, useGetMe, useValidateDiscount } from "@workspace/api-client-react";
+import { useCreateOrder, useValidateDiscount } from "@/lib/supabase-hooks";
+import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function Cart() {
   const { items, updateQuantity, removeItem, getCartTotal, clearCart } = useCart();
-  const { data: user, isLoading: userLoading } = useGetMe({ query: { retry: false } });
+  const { profile: user, loading: userLoading } = useAuth();
   const { mutate: createOrder, isPending } = useCreateOrder();
   const { mutateAsync: validateDiscount, isPending: isValidating } = useValidateDiscount();
   const [, setLocation] = useLocation();
