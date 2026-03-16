@@ -45,6 +45,7 @@ CREATE TABLE "users" (
   "role"          "user_role" NOT NULL DEFAULT 'customer',
   "phone"         TEXT,
   "address"       TEXT,
+  "modules"       JSONB NOT NULL DEFAULT '{}',
   "created_at"    TIMESTAMP NOT NULL DEFAULT NOW(),
   "updated_at"    TIMESTAMP NOT NULL DEFAULT NOW()
 );
@@ -132,6 +133,33 @@ CREATE TABLE "order_items" (
   "subtotal"   NUMERIC(12, 2) NOT NULL,
   "created_at" TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+-- Table que guarda las asignaciones de un pedido a un repartidor.
+-- Se usa en la UI de asignar pedido y en la vista del chofer.
+CREATE TABLE "order_deliveries" (
+  "id"            SERIAL PRIMARY KEY,
+  "order_id"      INTEGER NOT NULL REFERENCES "orders"("id"),
+  "assigned_to"   INTEGER REFERENCES "users"("id"),
+  "delivery_date" DATE,
+  "status"        TEXT NOT NULL DEFAULT 'pending',
+  "delivered_at"  TIMESTAMP,
+  "notes"         TEXT,
+  "created_at"    TIMESTAMP NOT NULL DEFAULT NOW(),
+  "updated_at"    TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX "order_deliveries_order_id_uindex" ON "order_deliveries" ("order_id");
+
+-- Pagos de pedidos (pueden ser múltiples, con distintos métodos)
+CREATE TABLE "order_payments" (
+  "id"                SERIAL PRIMARY KEY,
+  "order_id"          INTEGER NOT NULL REFERENCES "orders"("id"),
+  "payment_method_id" INTEGER NOT NULL REFERENCES "payment_methods"("id"),
+  "amount"            NUMERIC(12, 2) NOT NULL,
+  "created_at"        TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX "order_payments_order_id_idx" ON "order_payments" ("order_id");
 
 CREATE TABLE "suppliers" (
   "id"           SERIAL PRIMARY KEY,

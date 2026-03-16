@@ -41,7 +41,7 @@ export default function SellerOrders() {
   const { data: driversData, isLoading: driversLoading } = useUsers({ role: "delivery" });
   const { data: deliveriesData } = useOrderDeliveries();
 
-  const { mutate: assignDelivery, isLoading: assigning } = useAssignOrderDelivery();
+  const { mutate: assignDelivery, isPending: assigning } = useAssignOrderDelivery();
   const { mutate: updateOrderStatus } = useUpdateOrderStatus();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -66,7 +66,7 @@ export default function SellerOrders() {
       await assignDelivery({
         orderId: selectedOrder.id,
         assignedTo: driverId,
-        deliveryDate: deliveryDate || null,
+        deliveryDate: deliveryDate || undefined,
         status: "assigned",
       });
       await updateOrderStatus({ id: selectedOrder.id, data: { status: "shipped" } });

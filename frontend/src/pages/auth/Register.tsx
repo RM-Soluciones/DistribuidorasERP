@@ -55,9 +55,10 @@ export default function Register() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email Address *</Label>
+                  <Label htmlFor="email">Usuario / Email *</Label>
                   <Input 
-                    id="email" type="email" required className="h-12"
+                    id="email" type="text" required className="h-12"
+                    placeholder="usuario (o usuario@empresa.com)"
                     value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})}
                   />
                 </div>

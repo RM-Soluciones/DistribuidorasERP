@@ -53,11 +53,11 @@ export default function Login() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email">Usuario / Email</Label>
                 <Input 
                   id="email" 
-                  type="email" 
-                  placeholder="name@company.com" 
+                  type="text" 
+                  placeholder="usuario (o usuario@empresa.com)" 
                   required 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}

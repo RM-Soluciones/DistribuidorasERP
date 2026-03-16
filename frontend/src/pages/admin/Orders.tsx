@@ -1,15 +1,17 @@
 import { useState } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useOrders, useUpdateOrderStatus, OrderStatus } from "@/lib/supabase-hooks";
+import { useOrders, useUpdateOrderStatus, useAssignOrderDelivery, useUsers, OrderStatus } from "@/lib/supabase-hooks";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Eye, Package, Tag, Monitor } from "lucide-react";
+import { Eye, Package, Tag, Monitor, Truck } from "lucide-react";
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "Pendiente", confirmed: "Confirmado", processing: "Procesando",
@@ -28,12 +30,18 @@ const STATUS_COLORS: Record<string, string> = {
 export default function AdminOrders() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [assignOrder, setAssignOrder] = useState<any>(null);
+  const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null);
+  const [assignDate, setAssignDate] = useState<string>(new Date().toISOString().slice(0, 10));
+
   const { data: ordersData, isLoading } = useOrders({
     limit: 100,
     status: statusFilter !== "all" ? (statusFilter as OrderStatus) : undefined,
   });
+  const { data: driversData } = useUsers({ role: "delivery" });
 
   const { mutate: updateStatus } = useUpdateOrderStatus();
+  const { mutate: assignDelivery } = useAssignOrderDelivery();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -47,6 +55,33 @@ export default function AdminOrders() {
         },
       }
     );
+  };
+
+  const handleAssign = async () => {
+    if (!assignOrder) return;
+    if (!selectedDriverId) {
+      toast({ title: "Selecciona un repartidor", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const assignmentDate = assignDate || new Date().toISOString().slice(0, 10);
+      await assignDelivery({
+        orderId: assignOrder.id,
+        assignedTo: selectedDriverId,
+        deliveryDate: assignmentDate,
+        status: "assigned",
+      });
+
+      await updateStatus({ id: assignOrder.id, data: { status: "processing" } });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      toast({ title: "Pedido asignado", description: `Pedido #${assignOrder.id} asignado a repartidor.` });
+      setAssignOrder(null);
+      setSelectedDriverId(null);
+      setAssignDate(new Date().toISOString().slice(0, 10));
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "No se pudo asignar el pedido.", variant: "destructive" });
+    }
   };
 
   return (
@@ -131,9 +166,20 @@ export default function AdminOrders() {
                     </SelectContent>
                   </Select>
                 </TableCell>
-                <TableCell>
+                <TableCell className="flex gap-2">
                   <Button variant="ghost" size="icon" onClick={() => setSelectedOrder(order)}>
                     <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setAssignOrder(order);
+                      setSelectedDriverId(null);
+                      setAssignDate(new Date().toISOString().slice(0, 10));
+                    }}
+                  >
+                    <Truck className="h-4 w-4" />
                   </Button>
                 </TableCell>
               </TableRow>
@@ -247,6 +293,46 @@ export default function AdminOrders() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!assignOrder} onOpenChange={(open) => !open && setAssignOrder(null)}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Truck className="h-5 w-5 text-primary" />
+              Asignar pedido #{assignOrder?.id}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label>Repartidor *</Label>
+              <Select value={selectedDriverId?.toString() ?? ""} onValueChange={(v) => setSelectedDriverId(v ? parseInt(v) : null)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un repartidor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(driversData?.users || []).map((driver) => (
+                    <SelectItem key={driver.id} value={driver.id.toString()}>
+                      {driver.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Fecha de entrega</Label>
+              <Input type="date" value={assignDate} onChange={(e) => setAssignDate(e.target.value)} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setAssignOrder(null)}>
+                Cancelar
+              </Button>
+              <Button type="button" onClick={handleAssign}>
+                Asignar
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </AdminLayout>

@@ -2,6 +2,19 @@ import { createContext, useContext, useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 
+const DEFAULT_AUTH_EMAIL_DOMAIN = "example.com";
+
+function normalizeAuthEmail(identifier: string) {
+  const trimmed = identifier.trim().toLowerCase();
+  return trimmed.includes("@") ? trimmed : `${trimmed}@${DEFAULT_AUTH_EMAIL_DOMAIN}`;
+}
+
+export type UserModules = {
+  pos?: boolean;
+  deliveries?: boolean;
+  purchases?: boolean;
+};
+
 export type UserProfile = {
   id: number;
   name: string;
@@ -9,6 +22,7 @@ export type UserProfile = {
   role: "customer" | "admin" | "seller" | "delivery";
   phone?: string | null;
   address?: string | null;
+  modules?: UserModules;
   createdAt: string;
 };
 
@@ -24,6 +38,7 @@ type AuthContextType = {
     phone?: string;
     address?: string;
     role?: "customer" | "seller" | "delivery";
+    modules?: UserModules;
   }) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -31,10 +46,11 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 async function fetchProfile(email: string): Promise<UserProfile | null> {
+  const normalizedEmail = normalizeAuthEmail(email);
   const { data } = await supabase
     .from("users")
     .select("*")
-    .eq("email", email)
+    .eq("email", normalizedEmail)
     .single();
   if (!data) return null;
   return {
@@ -44,6 +60,7 @@ async function fetchProfile(email: string): Promise<UserProfile | null> {
     role: data.role,
     phone: data.phone,
     address: data.address,
+    modules: data.modules ?? {},
     createdAt: data.created_at,
   };
 }
@@ -80,12 +97,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string): Promise<UserProfile | null> => {
+    const normalizedEmail = normalizeAuthEmail(email);
     const { error } = await supabase.auth.signInWithPassword({
-      email,
+      email: normalizedEmail,
       password,
     });
     if (error) throw new Error(error.message);
-    const p = await fetchProfile(email);
+    const p = await fetchProfile(normalizedEmail);
     setProfile(p);
     return p;
   };
@@ -97,6 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     phone,
     address,
     role,
+    modules,
   }: {
     email: string;
     password: string;
@@ -104,24 +123,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     phone?: string;
     address?: string;
     role?: "customer" | "seller" | "delivery";
+    modules?: UserModules;
   }) => {
-    const { error } = await supabase.auth.signUp({ email, password });
+    const normalizedEmail = normalizeAuthEmail(email);
+    const { error } = await supabase.auth.signUp({ email: normalizedEmail, password });
     if (error) throw new Error(error.message);
 
     const { error: upsertError } = await supabase.from("users").upsert(
       {
         name,
-        email,
+        email: normalizedEmail,
         password_hash: "SUPABASE_AUTH",
         role: role ?? "customer",
         phone: phone || null,
         address: address || null,
+        modules: modules ?? { pos: true, deliveries: true, purchases: true },
       },
       { onConflict: "email" }
     );
 
     if (upsertError) throw new Error(upsertError.message);
-    const p = await fetchProfile(email);
+    const p = await fetchProfile(normalizedEmail);
     setProfile(p);
   };
 

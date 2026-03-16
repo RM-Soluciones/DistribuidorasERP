@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useUsers, useCreateAdminUser, useDeleteAdminUser } from "@/lib/supabase-hooks";
+import { useUsers, useCreateAdminUser, useUpdateAdminUser, useDeleteAdminUser, UserModules } from "@/lib/supabase-hooks";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,17 +12,26 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { format } from "date-fns";
 import { UserPlus, Trash2, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch";
 
 export default function AdminUsers() {
   const [roleFilter, setRoleFilter] = useState<string | undefined>(undefined);
   const { data: usersData, isLoading, refetch } = useUsers({ limit: 100, role: roleFilter });
   const { mutateAsync: createAdmin, isPending: isCreating } = useCreateAdminUser();
+  const { mutateAsync: updateUser } = useUpdateAdminUser();
   const { mutateAsync: deleteUser } = useDeleteAdminUser();
   const { toast } = useToast();
 
   const [open, setOpen] = useState(false);
   const [role, setRole] = useState<"admin" | "seller" | "delivery" | "customer">("admin");
-  const [form, setForm] = useState({ name: "", email: "", password: "", phone: "", address: "" });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    phone: "",
+    address: "",
+    modules: { pos: true, deliveries: true, purchases: true } as UserModules,
+  });
   const [formError, setFormError] = useState("");
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -40,13 +49,34 @@ export default function AdminUsers() {
         role,
         phone: form.phone || undefined,
         address: form.address || undefined,
+        modules: form.modules,
       });
       toast({ title: "Usuario creado", description: `${form.name} ya puede acceder al sistema.` });
-      setForm({ name: "", email: "", password: "", phone: "", address: "" });
+      setForm({
+        name: "",
+        email: "",
+        password: "",
+        phone: "",
+        address: "",
+        modules: { pos: true, deliveries: true, purchases: true },
+      });
       setOpen(false);
       refetch();
     } catch (err: any) {
       setFormError(err?.message || "No se pudo crear el usuario.");
+    }
+  };
+
+  const handleToggleModule = async (user: any, moduleKey: keyof UserModules, value: boolean) => {
+    try {
+      await updateUser({
+        id: user.id,
+        modules: { ...(user.modules || {}), [moduleKey]: value },
+      });
+      toast({ title: "Permisos actualizados" });
+      refetch();
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "No se pudo actualizar.", variant: "destructive" });
     }
   };
 
@@ -113,11 +143,11 @@ export default function AdminUsers() {
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email">Usuario / Email *</Label>
                   <Input
                     id="email"
-                    type="email"
-                    placeholder="usuario@empresa.com"
+                    type="text"
+                    placeholder="usuario (o usuario@empresa.com)"
                     value={form.email}
                     onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                   />
@@ -147,6 +177,48 @@ export default function AdminUsers() {
                       <SelectItem value="admin">Administrador</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label>Permisos / Módulos</Label>
+                  <div className="flex flex-wrap gap-3">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={form.modules?.pos}
+                        onCheckedChange={(v) =>
+                          setForm((f) => ({
+                            ...f,
+                            modules: { ...f.modules, pos: v },
+                          }))
+                        }
+                      />
+                      <span className="text-sm">Punto de venta</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={form.modules?.deliveries}
+                        onCheckedChange={(v) =>
+                          setForm((f) => ({
+                            ...f,
+                            modules: { ...f.modules, deliveries: v },
+                          }))
+                        }
+                      />
+                      <span className="text-sm">Asignar entregas</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={form.modules?.purchases}
+                        onCheckedChange={(v) =>
+                          setForm((f) => ({
+                            ...f,
+                            modules: { ...f.modules, purchases: v },
+                          }))
+                        }
+                      />
+                      <span className="text-sm">Compras</span>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-1">
@@ -191,6 +263,7 @@ export default function AdminUsers() {
             <TableRow>
               <TableHead>Usuario</TableHead>
               <TableHead>Rol</TableHead>
+              <TableHead>Módulos</TableHead>
               <TableHead>Contacto</TableHead>
               <TableHead>Registro</TableHead>
               <TableHead className="w-[60px]"></TableHead>
@@ -224,6 +297,31 @@ export default function AdminUsers() {
                       {user.role === "admin" && <ShieldCheck className="h-3 w-3" />}
                       {user.role}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={user.modules?.pos ?? false}
+                          onCheckedChange={(v) => handleToggleModule(user, "pos", v)}
+                        />
+                        <span className="text-xs">POS</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={user.modules?.deliveries ?? false}
+                          onCheckedChange={(v) => handleToggleModule(user, "deliveries", v)}
+                        />
+                        <span className="text-xs">Entregas</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={user.modules?.purchases ?? false}
+                          onCheckedChange={(v) => handleToggleModule(user, "purchases", v)}
+                        />
+                        <span className="text-xs">Compras</span>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell className="text-sm">
                     <div>{user.phone || "—"}</div>

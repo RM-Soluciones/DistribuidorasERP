@@ -9,10 +9,20 @@ export function SellerLayout({ children }: { children: React.ReactNode }) {
   const { profile, loading } = useAuth();
 
   useEffect(() => {
-    if (!loading && (!profile || profile.role !== "seller")) {
+    if (!loading && (!profile || (profile.role !== "seller" && profile.role !== "admin"))) {
       setLocation("/login");
     }
   }, [loading, profile, setLocation]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!profile || (profile.role !== "seller" && profile.role !== "admin")) return null;
 
   if (loading) {
     return (

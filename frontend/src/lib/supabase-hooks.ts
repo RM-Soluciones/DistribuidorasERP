@@ -44,6 +44,14 @@ export type OrderItem = {
   subtotal: number;
 };
 
+export type OrderPayment = {
+  id: number;
+  paymentMethodId: number;
+  paymentMethodName?: string;
+  amount: number;
+  createdAt: string;
+};
+
 export type Order = {
   id: number;
   userId: number;
@@ -59,6 +67,7 @@ export type Order = {
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];
+  payments?: OrderPayment[];
   userName?: string;
   userEmail?: string;
 };
@@ -142,6 +151,12 @@ export type PaymentMethod = {
   createdAt: string;
 };
 
+export type UserModules = {
+  pos?: boolean;
+  deliveries?: boolean;
+  purchases?: boolean;
+};
+
 export type UserRow = {
   id: number;
   name: string;
@@ -149,6 +164,7 @@ export type UserRow = {
   role: "customer" | "admin" | "seller" | "delivery";
   phone?: string | null;
   address?: string | null;
+  modules?: UserModules;
   createdAt: string;
 };
 
@@ -209,6 +225,13 @@ function mapOrder(r: any): Order {
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     items: (r.order_items || []).map(mapOrderItem),
+    payments: (r.order_payments || []).map((p: any) => ({
+      id: p.id,
+      paymentMethodId: p.payment_method_id,
+      paymentMethodName: p.payment_methods?.name,
+      amount: parseFloat(p.amount),
+      createdAt: p.created_at,
+    })),
     userName: r.users?.name,
     userEmail: r.users?.email,
   };
@@ -337,6 +360,7 @@ function mapUser(r: any): UserRow {
     role: r.role,
     phone: r.phone,
     address: r.address,
+    modules: r.modules ?? {},
     createdAt: r.created_at,
   };
 }
@@ -574,7 +598,7 @@ export function useOrderDeliveries(params?: { orderId?: number; assignedTo?: num
       let q = supabase
         .from("order_deliveries")
         .select(
-          "*, orders(*, order_items(*, products(name)), users(name,email)), assigned_to(*)"
+          "*, orders(*, order_items(*, products(name)), order_payments(*, payment_methods(name)), users(name,email)), assigned_to(*)"
         )
         .order("delivery_date", { ascending: true });
 
@@ -627,6 +651,50 @@ export function useAssignOrderDelivery() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["order-deliveries"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["order-payments"] });
+    },
+  });
+}
+
+export function useOrderPayments(orderId?: number) {
+  return useQuery({
+    queryKey: ["order-payments", orderId],
+    enabled: !!orderId,
+    queryFn: async () => {
+      if (!orderId) return [];
+      const { data, error } = await supabase
+        .from("order_payments")
+        .select("*, payment_methods(name)")
+        .eq("order_id", orderId)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data || []).map((p: any) => ({
+        id: p.id,
+        orderId: p.order_id,
+        paymentMethodId: p.payment_method_id,
+        paymentMethodName: p.payment_methods?.name,
+        amount: parseFloat(p.amount),
+        createdAt: p.created_at,
+      }));
+    },
+  });
+}
+
+export function useCreateOrderPayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { orderId: number; paymentMethodId: number; amount: number }) => {
+      const { error } = await supabase.from("order_payments").insert({
+        order_id: data.orderId,
+        payment_method_id: data.paymentMethodId,
+        amount: data.amount,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["order-payments", vars.orderId] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["order-deliveries"] });
     },
   });
 }
@@ -825,18 +893,56 @@ export function useCreateAdminUser() {
       role?: "admin" | "seller" | "delivery" | "customer";
       phone?: string;
       address?: string;
+      modules?: UserModules;
     }) => {
+      const normalizedEmail = data.email.includes("@")
+        ? data.email.trim().toLowerCase()
+        : `${data.email.trim().toLowerCase()}@example.com`;
+      if (!data.password) {
+        throw new Error("Password es obligatorio para crear la cuenta.");
+      }
+
+      const { error: signupError } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password: data.password,
+      });
+      if (signupError) throw signupError;
+
       const { error } = await supabase.from("users").upsert(
         {
           name: data.name,
-          email: data.email,
+          email: normalizedEmail,
           password_hash: "SUPABASE_AUTH",
           role: data.role ?? "admin",
           phone: data.phone || null,
           address: data.address || null,
+          modules: data.modules ?? { pos: true, deliveries: true, purchases: true },
         },
         { onConflict: "email" }
       );
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+  });
+}
+
+export function useUpdateAdminUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      id: number;
+      name?: string;
+      email?: string;
+      role?: "admin" | "seller" | "delivery" | "customer";
+      phone?: string | null;
+      address?: string | null;
+      modules?: UserModules;
+    }) => {
+      const { id, ...rest } = data;
+      const updatePayload: any = {
+        ...rest,
+      };
+      const { error } = await supabase.from("users").update(updatePayload).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
