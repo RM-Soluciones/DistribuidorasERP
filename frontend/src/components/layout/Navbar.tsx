@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { ShoppingCart, LogOut, Package, LayoutDashboard, ChevronDown } from "lucide-react";
+import { ShoppingCart, LogOut, Package, LayoutDashboard, ChevronDown, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/hooks/use-cart";
@@ -76,11 +76,18 @@ export function Navbar() {
                     </DropdownMenuItem>
                   )}
                   {user.role === 'seller' && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/seller" className="cursor-pointer flex items-center gap-2 w-full">
-                        <Package className="h-4 w-4" /> Pedidos
-                      </Link>
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin/pos" className="cursor-pointer flex items-center gap-2 w-full">
+                          <Monitor className="h-4 w-4" /> Inicio
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/seller" className="cursor-pointer flex items-center gap-2 w-full">
+                          <Package className="h-4 w-4" /> Pedidos
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
                   )}
                   {user.role === 'delivery' && (
                     <DropdownMenuItem asChild>

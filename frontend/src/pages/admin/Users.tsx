@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
-import { UserPlus, Trash2, ShieldCheck } from "lucide-react";
+import { Edit, UserPlus, Trash2, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 
@@ -23,6 +23,7 @@ export default function AdminUsers() {
   const { toast } = useToast();
 
   const [open, setOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any | null>(null);
   const [role, setRole] = useState<"admin" | "seller" | "delivery" | "customer">("admin");
   const [form, setForm] = useState({
     name: "",
@@ -30,40 +31,133 @@ export default function AdminUsers() {
     password: "",
     phone: "",
     address: "",
-    modules: { pos: true, deliveries: true, purchases: true } as UserModules,
+    is_active: true,
+    modules: {
+      dashboard: true,
+      categories: true,
+      discounts: true,
+      offers: true,
+      orders: true,
+      payment_methods: true,
+      pos: true,
+      products: true,
+      purchases: true,
+      suppliers: true,
+      clients: true,
+      users: true,
+      deliveries: true,
+    } as UserModules,
   });
   const [formError, setFormError] = useState("");
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const resetForm = () => {
+    setForm({
+      name: "",
+      email: "",
+      password: "",
+      phone: "",
+      address: "",
+      is_active: true,
+      modules: {
+        dashboard: true,
+        categories: true,
+        discounts: true,
+        offers: true,
+        orders: true,
+        payment_methods: true,
+        pos: true,
+        products: true,
+        purchases: true,
+        suppliers: true,
+        clients: true,
+        users: true,
+        deliveries: true,
+      },
+    });
+    setRole("admin");
+    setEditingUser(null);
+    setFormError("");
+  };
+
+  const openCreateDialog = () => {
+    resetForm();
+    setOpen(true);
+  };
+
+  const openEditDialog = (user: any) => {
+    setEditingUser(user);
+    setRole(user.role);
+    setForm({
+      name: user.name,
+      email: user.email,
+      password: "",
+      phone: user.phone || "",
+      address: user.address || "",
+      is_active: user.is_active ?? true,
+      modules: user.modules ?? {
+        dashboard: true,
+        categories: true,
+        discounts: true,
+        offers: true,
+        orders: true,
+        payment_methods: true,
+        pos: true,
+        products: true,
+        purchases: true,
+        suppliers: true,
+        clients: true,
+        users: true,
+        deliveries: true,
+      },
+    });
+    setFormError("");
+    setOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError("");
-    if (!form.name || !form.email || !form.password) {
-      setFormError("Nombre, email y contraseña son obligatorios.");
+
+    if (!form.name || !form.email) {
+      setFormError("Nombre y email son obligatorios.");
       return;
     }
+
     try {
-      await createAdmin({
-        name: form.name,
-        email: form.email,
-        password: form.password,
-        role,
-        phone: form.phone || undefined,
-        address: form.address || undefined,
-        modules: form.modules,
-      });
-      toast({ title: "Usuario creado", description: `${form.name} ya puede acceder al sistema.` });
-      setForm({
-        name: "",
-        email: "",
-        password: "",
-        phone: "",
-        address: "",
-        modules: { pos: true, deliveries: true, purchases: true },
-      });
+      if (editingUser) {
+        await updateUser({
+          id: editingUser.id,
+          name: form.name,
+          email: form.email,
+          role,
+          phone: form.phone || null,
+          address: form.address || null,
+          modules: form.modules,
+          is_active: form.is_active,
+        });
+        toast({ title: "Usuario actualizado", description: `${form.name} fue actualizado.` });
+      } else {
+        if (!form.password) {
+          setFormError("Contraseña es obligatoria para crear el usuario.");
+          return;
+        }
+        await createAdmin({
+          name: form.name,
+          email: form.email,
+          password: form.password,
+          role,
+          phone: form.phone || undefined,
+          address: form.address || undefined,
+          modules: form.modules,
+        });
+        toast({ title: "Usuario creado", description: `${form.name} ya puede acceder al sistema.` });
+      }
+
+      resetForm();
       setOpen(false);
       refetch();
     } catch (err: any) {
-      setFormError(err?.message || "No se pudo crear el usuario.");
+      setFormError(err?.message || "No se pudo guardar el usuario.");
     }
   };
 
@@ -119,7 +213,7 @@ export default function AdminUsers() {
 
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
+              <Button className="gap-2" onClick={openCreateDialog}>
                 <UserPlus className="h-4 w-4" />
                 Crear usuario
               </Button>
@@ -128,10 +222,10 @@ export default function AdminUsers() {
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <ShieldCheck className="h-5 w-5 text-primary" />
-                  Nuevo usuario
+                  {editingUser ? "Editar usuario" : "Nuevo usuario"}
                 </DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleCreate} className="space-y-4 mt-2">
+              <form onSubmit={handleSubmit} className="space-y-4 mt-2">
                 <div className="space-y-1">
                   <Label htmlFor="name">Nombre completo *</Label>
                   <Input
@@ -179,45 +273,45 @@ export default function AdminUsers() {
                   </Select>
                 </div>
 
+                <div className="flex items-center gap-3">
+                  <Switch
+                    checked={form.is_active}
+                    onCheckedChange={(v) => setForm((f) => ({ ...f, is_active: v }))}
+                  />
+                  <Label>Activo</Label>
+                </div>
+
                 <div className="space-y-1">
                   <Label>Permisos / Módulos</Label>
-                  <div className="flex flex-wrap gap-3">
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={form.modules?.pos}
-                        onCheckedChange={(v) =>
-                          setForm((f) => ({
-                            ...f,
-                            modules: { ...f.modules, pos: v },
-                          }))
-                        }
-                      />
-                      <span className="text-sm">Punto de venta</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={form.modules?.deliveries}
-                        onCheckedChange={(v) =>
-                          setForm((f) => ({
-                            ...f,
-                            modules: { ...f.modules, deliveries: v },
-                          }))
-                        }
-                      />
-                      <span className="text-sm">Asignar entregas</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={form.modules?.purchases}
-                        onCheckedChange={(v) =>
-                          setForm((f) => ({
-                            ...f,
-                            modules: { ...f.modules, purchases: v },
-                          }))
-                        }
-                      />
-                      <span className="text-sm">Compras</span>
-                    </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {[
+                      { key: "dashboard", label: "Dashboard" },
+                      { key: "categories", label: "Categorías" },
+                      { key: "discounts", label: "Descuentos" },
+                      { key: "offers", label: "Ofertas" },
+                      { key: "orders", label: "Pedidos" },
+                      { key: "payment_methods", label: "Medios de pago" },
+                      { key: "pos", label: "Punto de venta" },
+                      { key: "products", label: "Productos" },
+                      { key: "purchases", label: "Compras" },
+                      { key: "suppliers", label: "Proveedores" },
+                      { key: "clients", label: "Clientes" },
+                      { key: "users", label: "Usuarios" },
+                      { key: "deliveries", label: "Entregas" },
+                    ].map((item) => (
+                      <div key={item.key} className="flex items-center gap-2">
+                        <Switch
+                          checked={(form.modules as any)?.[item.key] ?? false}
+                          onCheckedChange={(v) =>
+                            setForm((f) => ({
+                              ...f,
+                              modules: { ...f.modules, [item.key]: v },
+                            }))
+                          }
+                        />
+                        <span className="text-sm">{item.label}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -289,7 +383,7 @@ export default function AdminUsers() {
                     <div className="font-semibold">{user.name}</div>
                     <div className="text-sm text-muted-foreground">{user.email}</div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="space-y-1">
                     <Badge
                       variant={user.role === "admin" ? "default" : "secondary"}
                       className="uppercase text-[10px] tracking-wider gap-1"
@@ -297,30 +391,38 @@ export default function AdminUsers() {
                       {user.role === "admin" && <ShieldCheck className="h-3 w-3" />}
                       {user.role}
                     </Badge>
+                    <Badge
+                      variant={user.is_active ? "default" : "secondary"}
+                      className="uppercase text-[10px] tracking-wider"
+                    >
+                      {user.is_active ? "Activo" : "Inactivo"}
+                    </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={user.modules?.pos ?? false}
-                          onCheckedChange={(v) => handleToggleModule(user, "pos", v)}
-                        />
-                        <span className="text-xs">POS</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={user.modules?.deliveries ?? false}
-                          onCheckedChange={(v) => handleToggleModule(user, "deliveries", v)}
-                        />
-                        <span className="text-xs">Entregas</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={user.modules?.purchases ?? false}
-                          onCheckedChange={(v) => handleToggleModule(user, "purchases", v)}
-                        />
-                        <span className="text-xs">Compras</span>
-                      </div>
+                    <div className="flex flex-wrap gap-1">
+                      {[
+                        { key: "dashboard", label: "Dashboard" },
+                        { key: "categories", label: "Categorías" },
+                        { key: "discounts", label: "Descuentos" },
+                        { key: "offers", label: "Ofertas" },
+                        { key: "orders", label: "Pedidos" },
+                        { key: "payment_methods", label: "Medios de pago" },
+                        { key: "pos", label: "POS" },
+                        { key: "products", label: "Productos" },
+                        { key: "purchases", label: "Compras" },
+                        { key: "suppliers", label: "Proveedores" },
+                        { key: "users", label: "Usuarios" },
+                        { key: "deliveries", label: "Entregas" },
+                      ]
+                        .filter((m) => (user.modules as any)?.[m.key])
+                        .map((m) => (
+                          <Badge key={m.key} className="text-[10px]">
+                            {m.label}
+                          </Badge>
+                        ))}
+                      {(!user.modules || Object.values(user.modules).filter(Boolean).length === 0) && (
+                        <span className="text-xs text-muted-foreground">Sin permisos</span>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="text-sm">
@@ -330,7 +432,15 @@ export default function AdminUsers() {
                   <TableCell className="text-sm text-muted-foreground">
                     {format(new Date(user.createdAt), "d MMM yyyy")}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="flex items-center justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground"
+                      onClick={() => openEditDialog(user)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">

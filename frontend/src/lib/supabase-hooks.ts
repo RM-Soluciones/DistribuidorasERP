@@ -152,9 +152,19 @@ export type PaymentMethod = {
 };
 
 export type UserModules = {
+  dashboard?: boolean;
+  categories?: boolean;
+  discounts?: boolean;
+  offers?: boolean;
+  orders?: boolean;
+  payment_methods?: boolean;
   pos?: boolean;
-  deliveries?: boolean;
+  products?: boolean;
   purchases?: boolean;
+  suppliers?: boolean;
+  users?: boolean;
+  clients?: boolean;
+  deliveries?: boolean;
 };
 
 export type UserRow = {
@@ -164,6 +174,7 @@ export type UserRow = {
   role: "customer" | "admin" | "seller" | "delivery";
   phone?: string | null;
   address?: string | null;
+  is_active?: boolean;
   modules?: UserModules;
   createdAt: string;
 };
@@ -360,6 +371,7 @@ function mapUser(r: any): UserRow {
     role: r.role,
     phone: r.phone,
     address: r.address,
+    is_active: r.is_active ?? true,
     modules: r.modules ?? {},
     createdAt: r.created_at,
   };
@@ -684,12 +696,32 @@ export function useCreateOrderPayment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: { orderId: number; paymentMethodId: number; amount: number }) => {
-      const { error } = await supabase.from("order_payments").insert({
+      const { error: insertError } = await supabase.from("order_payments").insert({
         order_id: data.orderId,
         payment_method_id: data.paymentMethodId,
         amount: data.amount,
       });
-      if (error) throw error;
+      if (insertError) throw insertError;
+
+      // Check if we should mark the order as delivered when payments cover the total.
+      const { data: order } = await supabase.from("orders").select("total").eq("id", data.orderId).single();
+      if (order) {
+        const { data: payments } = await supabase
+          .from("order_payments")
+          .select("amount")
+          .eq("order_id", data.orderId);
+
+        const paid = (payments || []).reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0);
+        const total = parseFloat(order.total);
+
+        if (paid >= total) {
+          await supabase.from("orders").update({ status: "delivered" }).eq("id", data.orderId);
+          await supabase
+            .from("order_deliveries")
+            .update({ status: "delivered" })
+            .eq("order_id", data.orderId);
+        }
+      }
     },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ["order-payments", vars.orderId] });
@@ -864,6 +896,19 @@ export function useAdminStats() {
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 
+export type ClientAccount = {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string | null;
+  address?: string | null;
+  totalOrders: number;
+  totalPayments: number;
+  balance: number;
+  lastOrderAt?: string;
+  lastPaymentAt?: string;
+};
+
 export function useUsers(params?: { limit?: number; role?: string }) {
   return useQuery({
     queryKey: ["users", params],
@@ -883,6 +928,51 @@ export function useUsers(params?: { limit?: number; role?: string }) {
   });
 }
 
+export function useClientAccounts() {
+  return useQuery({
+    queryKey: ["clients"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select(
+          "id, name, email, phone, address, orders(total, created_at, order_payments(amount, created_at))"
+        )
+        .eq("role", "customer");
+      if (error) throw error;
+
+      return (data || []).map((u: any) => {
+        const orders = (u.orders || []) as any[];
+        const totalOrders = orders.reduce((sum, o) => sum + parseFloat(o.total ?? 0), 0);
+        const payments = orders.flatMap((o) => (o.order_payments || []).map((p: any) => ({ amount: parseFloat(p.amount), createdAt: p.created_at })));
+        const totalPayments = payments.reduce((sum, p) => sum + p.amount, 0);
+        const lastOrderAt = orders.reduce((latest: string | undefined, o) => {
+          if (!o.created_at) return latest;
+          if (!latest || new Date(o.created_at) > new Date(latest)) return o.created_at;
+          return latest;
+        }, undefined);
+        const lastPaymentAt = payments.reduce((latest: string | undefined, p) => {
+          if (!p.createdAt) return latest;
+          if (!latest || new Date(p.createdAt) > new Date(latest)) return p.createdAt;
+          return latest;
+        }, undefined);
+
+        return {
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          phone: u.phone,
+          address: u.address,
+          totalOrders,
+          totalPayments,
+          balance: Math.max(0, totalOrders - totalPayments),
+          lastOrderAt,
+          lastPaymentAt,
+        } as ClientAccount;
+      });
+    },
+  });
+}
+
 export function useCreateAdminUser() {
   const qc = useQueryClient();
   return useMutation({
@@ -893,6 +983,7 @@ export function useCreateAdminUser() {
       role?: "admin" | "seller" | "delivery" | "customer";
       phone?: string;
       address?: string;
+      is_active?: boolean;
       modules?: UserModules;
     }) => {
       const normalizedEmail = data.email.includes("@")
@@ -916,7 +1007,22 @@ export function useCreateAdminUser() {
           role: data.role ?? "admin",
           phone: data.phone || null,
           address: data.address || null,
-          modules: data.modules ?? { pos: true, deliveries: true, purchases: true },
+          is_active: data.is_active ?? true,
+          modules:
+            data.modules ?? {
+              dashboard: true,
+              categories: true,
+              discounts: true,
+              offers: true,
+              orders: true,
+              payment_methods: true,
+              pos: true,
+              products: true,
+              purchases: true,
+              suppliers: true,
+              users: true,
+              deliveries: true,
+            },
         },
         { onConflict: "email" }
       );
@@ -936,11 +1042,14 @@ export function useUpdateAdminUser() {
       role?: "admin" | "seller" | "delivery" | "customer";
       phone?: string | null;
       address?: string | null;
+      is_active?: boolean;
       modules?: UserModules;
     }) => {
       const { id, ...rest } = data;
       const updatePayload: any = {
         ...rest,
+        is_active: rest.is_active,
+        modules: rest.modules,
       };
       const { error } = await supabase.from("users").update(updatePayload).eq("id", id);
       if (error) throw error;

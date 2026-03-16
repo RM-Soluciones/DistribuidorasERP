@@ -10,9 +10,19 @@ function normalizeAuthEmail(identifier: string) {
 }
 
 export type UserModules = {
+  dashboard?: boolean;
+  categories?: boolean;
+  discounts?: boolean;
+  offers?: boolean;
+  orders?: boolean;
+  payment_methods?: boolean;
   pos?: boolean;
-  deliveries?: boolean;
+  products?: boolean;
   purchases?: boolean;
+  suppliers?: boolean;
+  users?: boolean;
+  clients?: boolean;
+  deliveries?: boolean;
 };
 
 export type UserProfile = {
@@ -22,6 +32,7 @@ export type UserProfile = {
   role: "customer" | "admin" | "seller" | "delivery";
   phone?: string | null;
   address?: string | null;
+  is_active?: boolean;
   modules?: UserModules;
   createdAt: string;
 };
@@ -53,6 +64,7 @@ async function fetchProfile(email: string): Promise<UserProfile | null> {
     .eq("email", normalizedEmail)
     .single();
   if (!data) return null;
+  if (!data.is_active) return null;
   return {
     id: data.id,
     name: data.name,
@@ -60,6 +72,7 @@ async function fetchProfile(email: string): Promise<UserProfile | null> {
     role: data.role,
     phone: data.phone,
     address: data.address,
+    is_active: data.is_active,
     modules: data.modules ?? {},
     createdAt: data.created_at,
   };
@@ -104,6 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     if (error) throw new Error(error.message);
     const p = await fetchProfile(normalizedEmail);
+    if (!p) throw new Error("La cuenta está deshabilitada o no existe.");
     setProfile(p);
     return p;
   };
@@ -137,7 +151,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: role ?? "customer",
         phone: phone || null,
         address: address || null,
-        modules: modules ?? { pos: true, deliveries: true, purchases: true },
+        modules:
+          modules ?? {
+            dashboard: true,
+            categories: true,
+            discounts: true,
+            offers: true,
+            orders: true,
+            payment_methods: true,
+            pos: true,
+            products: true,
+            purchases: true,
+            suppliers: true,
+            users: true,
+            deliveries: true,
+          },
       },
       { onConflict: "email" }
     );

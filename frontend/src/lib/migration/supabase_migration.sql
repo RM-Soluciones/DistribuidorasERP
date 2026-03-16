@@ -43,6 +43,7 @@ CREATE TABLE "users" (
   "email"         TEXT NOT NULL UNIQUE,
   "password_hash" TEXT NOT NULL,
   "role"          "user_role" NOT NULL DEFAULT 'customer',
+  "is_active"     BOOLEAN NOT NULL DEFAULT TRUE,
   "phone"         TEXT,
   "address"       TEXT,
   "modules"       JSONB NOT NULL DEFAULT '{}',

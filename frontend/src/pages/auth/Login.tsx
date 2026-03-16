@@ -24,6 +24,10 @@ export default function Login() {
       toast({ title: "Welcome back!", description: "Successfully logged in." });
       if (p?.role === "admin") {
         setLocation("/admin");
+      } else if (p?.role === "seller") {
+        setLocation("/admin/pos");
+      } else if (p?.role === "delivery") {
+        setLocation("/delivery");
       } else {
         setLocation("/customer/dashboard");
       }

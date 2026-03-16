@@ -10,32 +10,33 @@ const navSections = [
   {
     label: "Ventas",
     items: [
-      { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+      { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true, requiresModule: "dashboard" },
       { href: "/admin/pos", label: "Punto de Venta", icon: Monitor, requiresModule: "pos" },
-      { href: "/admin/orders", label: "Pedidos", icon: ShoppingCart },
+      { href: "/admin/orders", label: "Pedidos", icon: ShoppingCart, requiresModule: "orders" },
     ],
   },
   {
     label: "Catálogo",
     items: [
-      { href: "/admin/products", label: "Productos", icon: Package },
-      { href: "/admin/categories", label: "Categorías", icon: FolderTree },
-      { href: "/admin/discounts", label: "Descuentos", icon: Tag },
-      { href: "/admin/offers", label: "Ofertas Combo", icon: Gift },
+      { href: "/admin/products", label: "Productos", icon: Package, requiresModule: "products" },
+      { href: "/admin/categories", label: "Categorías", icon: FolderTree, requiresModule: "categories" },
+      { href: "/admin/discounts", label: "Descuentos", icon: Tag, requiresModule: "discounts" },
+      { href: "/admin/offers", label: "Ofertas Combo", icon: Gift, requiresModule: "offers" },
     ],
   },
   {
     label: "Compras",
     items: [
-      { href: "/admin/suppliers", label: "Proveedores", icon: Truck, requiresModule: "purchases" },
+      { href: "/admin/suppliers", label: "Proveedores", icon: Truck, requiresModule: "suppliers" },
       { href: "/admin/purchases", label: "Compras", icon: ShoppingBag, requiresModule: "purchases" },
-      { href: "/admin/payment-methods", label: "Medios de Pago", icon: CreditCard, requiresModule: "purchases" },
+      { href: "/admin/payment-methods", label: "Medios de Pago", icon: CreditCard, requiresModule: "payment_methods" },
     ],
   },
   {
     label: "Sistema",
     items: [
-      { href: "/admin/users", label: "Usuarios", icon: Users },
+      { href: "/admin/users", label: "Usuarios", icon: Users, requiresModule: "users" },
+      { href: "/admin/clients", label: "Clientes", icon: FolderTree, requiresModule: "clients" },
     ],
   },
 ];
@@ -46,12 +47,6 @@ export function AdminSidebar() {
 
   const modules = profile?.modules ?? {};
   const isSeller = profile?.role === "seller";
-  const allowedSections = isSeller
-    ? [
-        "Ventas",
-        ...(modules.purchases ? ["Compras"] : []),
-      ]
-    : undefined;
 
   const handleLogout = async () => {
     await signOut();
@@ -65,7 +60,6 @@ export function AdminSidebar() {
     <div className="w-64 bg-card border-r border-border h-[calc(100vh-4rem)] flex flex-col fixed left-0 top-16 z-40">
       <div className="flex-1 py-4 px-3 space-y-4 overflow-y-auto">
         {navSections
-          .filter((section) => !allowedSections || allowedSections.includes(section.label))
           .map((section) => (
             <div key={section.label}>
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 mb-1">{section.label}</p>
@@ -74,7 +68,8 @@ export function AdminSidebar() {
                   .filter((item) => {
                     if (!isSeller) return true;
                     if (!item.requiresModule) return true;
-                    return !!modules[item.requiresModule as keyof typeof modules];
+                    const hasAccess = (modules as any)[item.requiresModule];
+                    return hasAccess !== false;
                   })
                   .map((item) => {
                     const active = isActive(item.href, item.exact);

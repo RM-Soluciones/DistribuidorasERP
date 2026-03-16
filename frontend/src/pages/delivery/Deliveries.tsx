@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { DeliveryLayout } from "@/components/layout/DeliveryLayout";
 import { useAuth } from "@/lib/auth-context";
-import { useCreateOrderPayment, useOrderDeliveries, useOrderPayments, usePaymentMethods, useUpdateOrderStatus } from "@/lib/supabase-hooks";
+import { useAssignOrderDelivery, useCreateOrderPayment, useOrderDeliveries, useOrderPayments, usePaymentMethods, useUpdateOrderStatus } from "@/lib/supabase-hooks";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
@@ -39,7 +40,11 @@ export default function DeliveryDashboard() {
 
   const { data, isLoading } = useOrderDeliveries({ assignedTo: profile?.id, deliveryDate: date });
   const { mutate: updateOrderStatus } = useUpdateOrderStatus();
+  const { mutate: assignDelivery } = useAssignOrderDelivery();
   const [selectedDelivery, setSelectedDelivery] = useState<any | null>(null);
+  const [cancelDelivery, setCancelDelivery] = useState<any | null>(null);
+  const [cancelReason, setCancelReason] = useState<string>("");
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const { data: payments, isLoading: isLoadingPayments } = useOrderPayments(selectedDelivery?.order?.id);
   const { data: paymentMethods } = usePaymentMethods();
@@ -61,6 +66,32 @@ export default function DeliveryDashboard() {
       toast({ title: successMessage });
     } catch (err: any) {
       toast({ title: "Error", description: err?.message || "No se pudo actualizar.", variant: "destructive" });
+    }
+  };
+
+  const handleCancelDelivery = async () => {
+    if (!cancelDelivery) return;
+    setIsCancelling(true);
+
+    try {
+      await updateOrderStatus({ id: cancelDelivery.order?.id, data: { status: "cancelled" } });
+      await assignDelivery({
+        orderId: cancelDelivery.order?.id,
+        assignedTo: cancelDelivery.assignedTo,
+        status: "cancelled",
+        notes: cancelReason || "Pedido cancelado",
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["order-deliveries"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+
+      toast({ title: "Pedido cancelado", description: "El pedido ha sido cancelado con motivo registrado." });
+      setCancelDelivery(null);
+      setCancelReason("");
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "No se pudo cancelar el pedido.", variant: "destructive" });
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -193,7 +224,10 @@ export default function DeliveryDashboard() {
                         size="sm"
                         variant="destructive"
                         className="gap-2"
-                        onClick={() => handleUpdateStatus(d.order?.id ?? 0, "cancelled", "Pedido cancelado")}
+                        onClick={() => {
+                          setCancelDelivery(d);
+                          setCancelReason("");
+                        }}
                       >
                         <X className="h-4 w-4" />
                         Cancelar
@@ -361,6 +395,35 @@ export default function DeliveryDashboard() {
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setSelectedDelivery(null)}>
               Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!cancelDelivery} onOpenChange={(open) => !open && setCancelDelivery(null)}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Cancelar pedido</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Ingresa el motivo de la cancelación (visible en el historial).
+            </p>
+            <Textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Motivo de cancelación..."
+              className="h-24"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setCancelDelivery(null)}>
+              Volver
+            </Button>
+            <Button type="button" variant="destructive" onClick={handleCancelDelivery} disabled={isCancelling}>
+              {isCancelling ? "Cancelando..." : "Confirmar cancelación"}
             </Button>
           </DialogFooter>
         </DialogContent>
