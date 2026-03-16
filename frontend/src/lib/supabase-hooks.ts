@@ -148,6 +148,9 @@ export type PaymentMethod = {
   name: string;
   type: string;
   isActive: boolean;
+  isPos?: boolean;
+  isPurchase?: boolean;
+  isDelivery?: boolean;
   createdAt: string;
 };
 
@@ -359,6 +362,9 @@ function mapPaymentMethod(r: any): PaymentMethod {
     name: r.name,
     type: r.type,
     isActive: r.is_active,
+    isPos: r.is_pos ?? true,
+    isPurchase: r.is_purchase ?? true,
+    isDelivery: r.is_delivery ?? true,
     createdAt: r.created_at,
   };
 }
@@ -558,10 +564,21 @@ export function useDeleteProduct() {
 
 // ─── Orders ──────────────────────────────────────────────────────────────────
 
-export function useOrders(params?: { limit?: number; status?: string }) {
+export function useOrders(params?: { limit?: number; status?: string; userId?: number; dateFrom?: string; dateTo?: string }) {
   return useQuery({
     queryKey: ["orders", params],
     queryFn: async () => {
+      const startOfDay = (date: string) => {
+        const d = new Date(date);
+        d.setHours(0, 0, 0, 0);
+        return d.toISOString();
+      };
+      const endOfDay = (date: string) => {
+        const d = new Date(date);
+        d.setHours(23, 59, 59, 999);
+        return d.toISOString();
+      };
+
       let q = supabase
         .from("orders")
         .select(
@@ -572,6 +589,15 @@ export function useOrders(params?: { limit?: number; status?: string }) {
       if (params?.status) {
         q = q.eq("status", params.status);
       }
+      if (params?.userId) {
+        q = q.eq("user_id", params.userId);
+      }
+      if (params?.dateFrom) {
+        q = q.gte("created_at", startOfDay(params.dateFrom));
+      }
+      if (params?.dateTo) {
+        q = q.lte("created_at", endOfDay(params.dateTo));
+      }
       if (params?.limit) {
         q = q.limit(params.limit);
       }
@@ -580,6 +606,22 @@ export function useOrders(params?: { limit?: number; status?: string }) {
       if (error) throw error;
       return { orders: (data || []).map(mapOrder) };
     },
+  });
+}
+
+export function useOrder(id: number) {
+  return useQuery({
+    queryKey: ["order", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("*, order_items(*, products(name)), users(name, email)")
+        .eq("id", id)
+        .single();
+      if (error) throw error;
+      return mapOrder(data);
+    },
+    enabled: !!id,
   });
 }
 
@@ -593,6 +635,32 @@ export function useUpdateOrderStatus() {
       id: number;
       data: { status: OrderStatus };
     }) => {
+      // Restore stock when cancelling an order (only once)
+      const { data: currentOrder } = await supabase.from("orders").select("status").eq("id", id).single();
+      const currentStatus = (currentOrder as any)?.status;
+
+      if (currentStatus !== "cancelled" && data.status === "cancelled") {
+        const { data: items } = await supabase
+          .from("order_items")
+          .select("product_id, quantity")
+          .eq("order_id", id);
+
+        if (items && items.length) {
+          for (const item of items) {
+            const { data: prod } = await supabase
+              .from("products")
+              .select("stock")
+              .eq("id", item.product_id)
+              .single();
+            if (!prod) continue;
+            await supabase
+              .from("products")
+              .update({ stock: (prod as any).stock + item.quantity })
+              .eq("id", item.product_id);
+          }
+        }
+      }
+
       const { error } = await supabase
         .from("orders")
         .update({ status: data.status })
@@ -600,6 +668,124 @@ export function useUpdateOrderStatus() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["orders"] }),
+  });
+}
+
+export function useUpdateOrderItems() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      orderId,
+      items,
+    }: {
+      orderId: number;
+      items: { productId: number; quantity: number }[];
+    }) => {
+      const { data: order, error: orderErr } = await supabase
+        .from("orders")
+        .select("discount_amount")
+        .eq("id", orderId)
+        .single();
+      if (orderErr) throw orderErr;
+
+      const { data: currentItems } = await supabase
+        .from("order_items")
+        .select("product_id, quantity, unit_price")
+        .eq("order_id", orderId);
+
+      const currentMap = new Map<number, any>(
+        (currentItems || []).map((i: any) => [i.product_id, i])
+      );
+
+      const desiredMap = new Map<number, { quantity: number }>(
+        items.map((i) => [i.productId, { quantity: i.quantity }])
+      );
+
+      const productIds = Array.from(
+        new Set([...(currentMap.keys() as any), ...(desiredMap.keys() as any)])
+      );
+
+      const { data: products } = await supabase
+        .from("products")
+        .select("id, stock, price")
+        .in("id", productIds);
+
+      const productMap = new Map<number, any>(
+        (products || []).map((p: any) => [p.id, p])
+      );
+
+      // Validate stock and update quantities
+      for (const productId of productIds) {
+        const currentQty = currentMap.get(productId)?.quantity ?? 0;
+        const newQty = desiredMap.get(productId)?.quantity ?? 0;
+        const delta = newQty - currentQty;
+        if (delta > 0) {
+          const prod = productMap.get(productId);
+          if (!prod) throw new Error("Producto no encontrado");
+          if (prod.stock < delta) throw new Error(`Stock insuficiente para el producto ${productId}`);
+        }
+      }
+
+      // Update stock for each product
+      for (const productId of productIds) {
+        const currentQty = currentMap.get(productId)?.quantity ?? 0;
+        const newQty = desiredMap.get(productId)?.quantity ?? 0;
+        const delta = newQty - currentQty;
+        if (delta === 0) continue;
+
+        const prod = productMap.get(productId);
+        if (!prod) continue;
+
+        await supabase
+          .from("products")
+          .update({ stock: prod.stock - delta })
+          .eq("id", productId);
+      }
+
+      // Update order items
+      for (const [productId, { quantity }] of desiredMap.entries()) {
+        const prod = productMap.get(productId);
+        if (!prod) continue;
+        if (quantity <= 0) {
+          await supabase
+            .from("order_items")
+            .delete()
+            .eq("order_id", orderId)
+            .eq("product_id", productId);
+          continue;
+        }
+        await supabase
+          .from("order_items")
+          .upsert(
+            {
+              order_id: orderId,
+              product_id: productId,
+              quantity,
+              unit_price: prod.price,
+              subtotal: prod.price * quantity,
+            },
+            { onConflict: "order_id,product_id" }
+          );
+      }
+
+      const subtotal = items.reduce((sum, item) => {
+        const prod = productMap.get(item.productId);
+        return sum + (prod?.price ?? 0) * item.quantity;
+      }, 0);
+
+      const discount = (order as any)?.discount_amount ?? 0;
+      const total = Math.max(0, subtotal - (discount || 0));
+
+      const { error } = await supabase
+        .from("orders")
+        .update({ subtotal, total })
+        .eq("id", orderId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+    },
   });
 }
 
@@ -645,6 +831,20 @@ export function useAssignOrderDelivery() {
       notes?: string;
       deliveredAt?: string;
     }) => {
+      // Prevent reassignment of orders that are already delivered or cancelled
+      const { data: order } = await supabase
+        .from("orders")
+        .select("status")
+        .eq("id", payload.orderId)
+        .single();
+
+      if (order?.status === "delivered") {
+        throw new Error("No se puede reasignar un pedido que ya fue entregado.");
+      }
+      if (order?.status === "cancelled") {
+        throw new Error("No se puede asignar un pedido cancelado.");
+      }
+
       const { error } = await supabase
         .from("order_deliveries")
         .upsert(
@@ -687,6 +887,57 @@ export function useOrderPayments(orderId?: number) {
         paymentMethodName: p.payment_methods?.name,
         amount: parseFloat(p.amount),
         createdAt: p.created_at,
+      }));
+    },
+  });
+}
+
+export function useOrderPaymentsByDate(params?: { dateFrom?: string; dateTo?: string }) {
+  return useQuery({
+    queryKey: ["order-payments", params],
+    queryFn: async () => {
+      const startOfDay = (date: string) => {
+        const d = new Date(date);
+        d.setHours(0, 0, 0, 0);
+        return d.toISOString();
+      };
+      const endOfDay = (date: string) => {
+        const d = new Date(date);
+        d.setHours(23, 59, 59, 999);
+        return d.toISOString();
+      };
+
+      let q = supabase
+        .from("order_payments")
+        .select(
+          "*, payment_methods(name), orders(id, customer_name, is_pos, created_at)"
+        )
+        .order("created_at", { ascending: true });
+
+      if (params?.dateFrom) {
+        q = q.gte("created_at", startOfDay(params.dateFrom));
+      }
+      if (params?.dateTo) {
+        q = q.lte("created_at", endOfDay(params.dateTo));
+      }
+
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data || []).map((p: any) => ({
+        id: p.id,
+        orderId: p.order_id,
+        paymentMethodId: p.payment_method_id,
+        paymentMethodName: p.payment_methods?.name,
+        amount: parseFloat(p.amount),
+        createdAt: p.created_at,
+        order: p.orders
+          ? {
+              id: p.orders.id,
+              customerName: p.orders.customer_name,
+              isPOS: p.orders.is_pos,
+              createdAt: p.orders.created_at,
+            }
+          : undefined,
       }));
     },
   });
@@ -1641,14 +1892,24 @@ export function useCreatePurchase() {
 
 // ─── Payment Methods ──────────────────────────────────────────────────────────
 
-export function usePaymentMethods() {
+export function usePaymentMethods(params?: { for?: "pos" | "purchase" | "delivery"; onlyActive?: boolean }) {
   return useQuery({
-    queryKey: ["payment-methods"],
+    queryKey: ["payment-methods", params],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("payment_methods")
-        .select("*")
-        .order("name");
+      let q = supabase.from("payment_methods").select("*").order("name");
+      if (params?.onlyActive) {
+        q = q.eq("is_active", true);
+      }
+      if (params?.for === "pos") {
+        q = q.eq("is_pos", true);
+      }
+      if (params?.for === "purchase") {
+        q = q.eq("is_purchase", true);
+      }
+      if (params?.for === "delivery") {
+        q = q.eq("is_delivery", true);
+      }
+      const { data, error } = await q;
       if (error) throw error;
       return (data || []).map(mapPaymentMethod);
     },
@@ -1658,11 +1919,21 @@ export function usePaymentMethods() {
 export function useCreatePaymentMethod() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { name: string; type: string; isActive: boolean }) => {
+    mutationFn: async (data: {
+      name: string;
+      type: string;
+      isActive: boolean;
+      isPos?: boolean;
+      isPurchase?: boolean;
+      isDelivery?: boolean;
+    }) => {
       const { error } = await supabase.from("payment_methods").insert({
         name: data.name,
         type: data.type,
         is_active: data.isActive,
+        is_pos: data.isPos ?? true,
+        is_purchase: data.isPurchase ?? true,
+        is_delivery: data.isDelivery ?? true,
       });
       if (error) throw error;
     },
@@ -1678,11 +1949,25 @@ export function useUpdatePaymentMethod() {
       data,
     }: {
       id: number;
-      data: { name: string; type: string; isActive: boolean };
+      data: {
+        name: string;
+        type: string;
+        isActive: boolean;
+        isPos?: boolean;
+        isPurchase?: boolean;
+        isDelivery?: boolean;
+      };
     }) => {
       const { error } = await supabase
         .from("payment_methods")
-        .update({ name: data.name, type: data.type, is_active: data.isActive })
+        .update({
+          name: data.name,
+          type: data.type,
+          is_active: data.isActive,
+          is_pos: data.isPos,
+          is_purchase: data.isPurchase,
+          is_delivery: data.isDelivery,
+        })
         .eq("id", id);
       if (error) throw error;
     },
@@ -1721,6 +2006,7 @@ export function useCreatePOSSale() {
         quantity: number;
         stock: number;
       }[];
+      payments?: { paymentMethodId: number; amount: number }[];
     }) => {
       const subtotal = data.items.reduce(
         (s, i) => s + i.unitPrice * i.quantity,
@@ -1752,12 +2038,14 @@ export function useCreatePOSSale() {
       }
 
       const total = Math.max(0, subtotal - discountAmount);
+      const totalPaid = (data.payments || []).reduce((sum, p) => sum + (p.amount || 0), 0);
+      const status = totalPaid >= total ? "delivered" : "confirmed";
 
       const { data: order, error } = await supabase
         .from("orders")
         .insert({
           user_id: data.userId,
-          status: "delivered",
+          status,
           total,
           subtotal,
           discount_amount: discountAmount || null,
@@ -1794,14 +2082,29 @@ export function useCreatePOSSale() {
         }
       }
 
+      if (data.payments && data.payments.length > 0) {
+        await supabase.from("order_payments").insert(
+          data.payments.map((p) => ({
+            order_id: order.id,
+            payment_method_id: p.paymentMethodId,
+            amount: p.amount,
+          }))
+        );
+      }
+
       return {
         id: order.id,
         total,
         subtotal,
         discountAmount,
         discountCode: appliedCode,
-        items: data.items,
+        items: data.items.map((item) => ({
+          ...item,
+          subtotal: item.unitPrice * item.quantity,
+        })),
         customerName: data.customerName,
+        payments: data.payments || [],
+        status,
         createdAt: order.created_at,
       };
     },

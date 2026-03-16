@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useProducts, useCategories, useValidateDiscount, useCreatePOSSale } from "@/lib/supabase-hooks";
+import { useProducts, useCategories, useValidateDiscount, useCreatePOSSale, usePaymentMethods } from "@/lib/supabase-hooks";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,17 +24,24 @@ export default function AdminPOS() {
   const [appliedDiscount, setAppliedDiscount] = useState<{ code: string; amount: number; message: string } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastSale, setLastSale] = useState<any>(null);
+  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<number | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentError, setPaymentError] = useState("");
+  const [payments, setPayments] = useState<{ paymentMethodId: number; methodName: string; amount: number }[]>([]);
   const { toast } = useToast();
 
   const { profile } = useAuth();
   const { data: productsData } = useProducts({ search, categoryId, limit: 50 });
   const { data: categories } = useCategories();
+  const { data: paymentMethods } = usePaymentMethods({ for: "pos", onlyActive: true });
   const { mutateAsync: validateDiscount } = useValidateDiscount();
   const { mutateAsync: createPOSSale } = useCreatePOSSale();
 
   const subtotal = cart.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
   const discountAmount = appliedDiscount?.amount || 0;
   const total = Math.max(0, subtotal - discountAmount);
+  const paidTotal = payments.reduce((s, p) => s + p.amount, 0);
+  const remaining = Math.max(0, total - paidTotal);
 
   const addToCart = (product: any) => {
     if (product.stock === 0) { toast({ title: "Sin stock", variant: "destructive" }); return; }
@@ -76,6 +83,39 @@ export default function AdminPOS() {
     }
   };
 
+  const handleAddPayment = () => {
+    setPaymentError("");
+
+    const amount = parseFloat(paymentAmount || "0");
+    const method = (paymentMethods || []).find((m) => m.id === selectedPaymentMethodId);
+
+    if (!method) {
+      setPaymentError("Selecciona un método de pago.");
+      return;
+    }
+
+    if (isNaN(amount) || amount < 0) {
+      setPaymentError("Ingresa un monto válido.");
+      return;
+    }
+
+    if (amount > remaining) {
+      setPaymentError("El monto no puede exceder el total restante.");
+      return;
+    }
+
+    setPayments((prev) => [
+      ...prev,
+      { paymentMethodId: method.id, methodName: method.name, amount },
+    ]);
+    setSelectedPaymentMethodId(null);
+    setPaymentAmount("");
+  };
+
+  const removePayment = (index: number) => {
+    setPayments((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleProcessSale = async () => {
     if (cart.length === 0) { toast({ title: "Carrito vacío", variant: "destructive" }); return; }
     if (!profile) { toast({ title: "No autenticado", variant: "destructive" }); return; }
@@ -87,6 +127,7 @@ export default function AdminPOS() {
         notes: notes || undefined,
         discountCode: appliedDiscount?.code || undefined,
         items: cart,
+        payments: payments.map((p) => ({ paymentMethodId: p.paymentMethodId, amount: p.amount })),
       });
       setLastSale(sale);
       setCart([]);
@@ -94,6 +135,9 @@ export default function AdminPOS() {
       setNotes("");
       setDiscountCode("");
       setAppliedDiscount(null);
+      setPayments([]);
+      setSelectedPaymentMethodId(null);
+      setPaymentAmount("");
       toast({ title: "Venta procesada", description: `Venta #${sale.id} registrada correctamente` });
     } catch (err: any) {
       toast({ title: "Error", description: err?.message || "No se pudo procesar la venta", variant: "destructive" });
@@ -105,7 +149,7 @@ export default function AdminPOS() {
   if (lastSale) {
     return (
       <AdminLayout>
-        <div className="max-w-lg mx-auto mt-8">
+        <div className="max-w-lg mx-auto mt-8 printable">
           <div className="bg-card border border-border rounded-2xl p-8 text-center shadow-sm">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold mb-1">¡Venta Completada!</h2>
@@ -118,7 +162,7 @@ export default function AdminPOS() {
               {lastSale.items.map((item: any) => (
                 <div key={item.id} className="flex justify-between">
                   <span>{item.productName} x{item.quantity}</span>
-                  <span className="font-medium">${item.subtotal.toFixed(2)}</span>
+                  <span className="font-medium">${((item.subtotal ?? item.unitPrice * item.quantity) as number).toFixed(2)}</span>
                 </div>
               ))}
               <Separator />
@@ -128,13 +172,24 @@ export default function AdminPOS() {
                   <span>-${lastSale.discountAmount.toFixed(2)}</span>
                 </div>
               )}
+              {lastSale.payments && lastSale.payments.length > 0 && (
+                <div className="space-y-1">
+                  <div className="text-xs text-muted-foreground">Pagos</div>
+                  {lastSale.payments.map((p: any, idx: number) => (
+                    <div key={idx} className="flex justify-between text-sm">
+                      <span>{p.methodName || `Método ${p.paymentMethodId}`}</span>
+                      <span className="font-medium">${p.amount.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="flex justify-between font-bold text-lg pt-1">
                 <span>Total</span>
                 <span>${lastSale.total.toFixed(2)}</span>
               </div>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 no-print">
               <Button variant="outline" className="flex-1 gap-2" onClick={() => window.print()}>
                 <Printer className="h-4 w-4" /> Imprimir
               </Button>
@@ -260,6 +315,55 @@ export default function AdminPOS() {
                       <Tag className="h-3 w-3"/>{appliedDiscount.message}
                     </div>
                   )}
+                </div>
+
+                {/* Payments */}
+                <div>
+                  <Label className="text-xs">Métodos de pago</Label>
+                  <div className="flex flex-col gap-2 mt-1">
+                    <div className="flex items-center gap-2">
+                      <select
+                        className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm"
+                        value={selectedPaymentMethodId ?? ""}
+                        onChange={(e) => setSelectedPaymentMethodId(e.target.value ? parseInt(e.target.value) : null)}
+                      >
+                        <option value="">Seleccionar método</option>
+                        {(paymentMethods || []).map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name}
+                          </option>
+                        ))}
+                      </select>
+                      <Input
+                        className="h-8 w-28 text-sm"
+                        placeholder="Monto"
+                        value={paymentAmount}
+                        onChange={(e) => setPaymentAmount(e.target.value)}
+                      />
+                      <Button size="sm" variant="outline" onClick={handleAddPayment}>
+                        Agregar
+                      </Button>
+                    </div>
+                    {paymentError && <div className="text-xs text-destructive">{paymentError}</div>}
+                    {payments.length > 0 && (
+                      <div className="space-y-1">
+                        {payments.map((p, idx) => (
+                          <div key={`${p.paymentMethodId}-${idx}`} className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 p-2 text-sm">
+                            <div>
+                              <div className="font-medium">{p.methodName}</div>
+                              <div className="text-xs text-muted-foreground">${p.amount.toFixed(2)}</div>
+                            </div>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removePayment(idx)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="text-xs text-muted-foreground">
+                      Total pagado: ${paidTotal.toFixed(2)} • Restante: ${remaining.toFixed(2)}
+                    </div>
+                  </div>
                 </div>
               </div>
 

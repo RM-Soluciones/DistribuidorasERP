@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Edit, Trash2, CreditCard, Banknote, Building2, ChevronRight } from "lucide-react";
+import { Plus, Edit, Trash2, CreditCard, Banknote, Building2, ChevronRight, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -22,7 +22,14 @@ const TYPE_ICONS: Record<string, any> = {
   debit_card: CreditCard, check: ChevronRight, other: CreditCard,
 };
 
-const emptyForm = { name: "", type: "cash" as any, isActive: true };
+const emptyForm = {
+  name: "",
+  type: "cash" as any,
+  isActive: true,
+  isPos: true,
+  isPurchase: true,
+  isDelivery: true,
+};
 
 export default function AdminPaymentMethods() {
   const { data: methods, isLoading, refetch } = usePaymentMethods();
@@ -39,7 +46,14 @@ export default function AdminPaymentMethods() {
   const openCreate = () => { setEditingId(null); setForm(emptyForm); setError(""); setOpen(true); };
   const openEdit = (m: any) => {
     setEditingId(m.id);
-    setForm({ name: m.name, type: m.type, isActive: m.isActive });
+    setForm({
+      name: m.name,
+      type: m.type,
+      isActive: m.isActive,
+      isPos: m.isPos ?? true,
+      isPurchase: m.isPurchase ?? true,
+      isDelivery: m.isDelivery ?? true,
+    });
     setError(""); setOpen(true);
   };
 
@@ -48,10 +62,35 @@ export default function AdminPaymentMethods() {
     setError("");
     if (!form.name) { setError("El nombre es obligatorio."); return; }
     try {
-      if (editingId) { await updateMethod({ id: editingId, data: form }); toast({ title: "Medio de pago actualizado" }); }
-      else { await createMethod(form); toast({ title: "Medio de pago creado" }); }
-      setOpen(false); refetch();
-    } catch (err: any) { setError(err?.message || "Error al guardar"); }
+      if (editingId) {
+        await updateMethod({
+          id: editingId,
+          data: {
+            name: form.name,
+            type: form.type,
+            isActive: form.isActive,
+            isPos: form.isPos,
+            isPurchase: form.isPurchase,
+            isDelivery: form.isDelivery,
+          },
+        });
+        toast({ title: "Medio de pago actualizado" });
+      } else {
+        await createMethod({
+          name: form.name,
+          type: form.type,
+          isActive: form.isActive,
+          isPos: form.isPos,
+          isPurchase: form.isPurchase,
+          isDelivery: form.isDelivery,
+        });
+        toast({ title: "Medio de pago creado" });
+      }
+      setOpen(false);
+      refetch();
+    } catch (err: any) {
+      setError(err?.message || "Error al guardar");
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -80,6 +119,9 @@ export default function AdminPaymentMethods() {
             <TableRow>
               <TableHead>Nombre</TableHead>
               <TableHead>Tipo</TableHead>
+              <TableHead className="text-center">POS</TableHead>
+              <TableHead className="text-center">Compras</TableHead>
+              <TableHead className="text-center">Envios</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
@@ -96,6 +138,15 @@ export default function AdminPaymentMethods() {
                   <TableCell className="font-semibold">{m.name}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="gap-1 text-xs"><Icon className="h-3 w-3"/>{TYPE_LABELS[m.type]}</Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {m.isPos ? <Check className="h-4 w-4 text-emerald-600" /> : <span className="text-muted-foreground">—</span>}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {m.isPurchase ? <Check className="h-4 w-4 text-emerald-600" /> : <span className="text-muted-foreground">—</span>}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {m.isDelivery ? <Check className="h-4 w-4 text-emerald-600" /> : <span className="text-muted-foreground">—</span>}
                   </TableCell>
                   <TableCell>
                     <Badge variant={m.isActive ? "default" : "secondary"} className="text-xs">{m.isActive ? "Activo" : "Inactivo"}</Badge>
@@ -147,6 +198,18 @@ export default function AdminPaymentMethods() {
             <div className="flex items-center gap-3">
               <Switch checked={form.isActive} onCheckedChange={v => setForm(f => ({ ...f, isActive: v }))} />
               <Label>Activo</Label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch checked={form.isPos} onCheckedChange={v => setForm(f => ({ ...f, isPos: v }))} />
+              <Label>Usar en POS</Label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch checked={form.isPurchase} onCheckedChange={v => setForm(f => ({ ...f, isPurchase: v }))} />
+              <Label>Usar en Compras</Label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch checked={form.isDelivery} onCheckedChange={v => setForm(f => ({ ...f, isDelivery: v }))} />
+              <Label>Usar en Envíos</Label>
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <DialogFooter>

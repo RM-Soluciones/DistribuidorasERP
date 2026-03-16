@@ -1,10 +1,11 @@
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Package, ShoppingCart, Users, FolderTree, LogOut,
-  Tag, Monitor, Gift, Truck, ShoppingBag, CreditCard, ChevronRight
+  Tag, Monitor, Gift, Truck, ShoppingBag, CreditCard, ChevronRight, X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
+import { Button } from "@/components/ui/button";
 
 const navSections = [
   {
@@ -13,6 +14,7 @@ const navSections = [
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true, requiresModule: "dashboard" },
       { href: "/admin/pos", label: "Punto de Venta", icon: Monitor, requiresModule: "pos" },
       { href: "/admin/orders", label: "Pedidos", icon: ShoppingCart, requiresModule: "orders" },
+      { href: "/admin/cash-register", label: "Caja diaria", icon: CreditCard, requiresModule: "cash_register" },
     ],
   },
   {
@@ -37,11 +39,12 @@ const navSections = [
     items: [
       { href: "/admin/users", label: "Usuarios", icon: Users, requiresModule: "users" },
       { href: "/admin/clients", label: "Clientes", icon: FolderTree, requiresModule: "clients" },
+      { href: "/admin/settings", label: "Ajustes", icon: Tag, requiresModule: "settings" },
     ],
   },
 ];
 
-export function AdminSidebar() {
+export function AdminSidebar({ onToggle }: { onToggle?: () => void }) {
   const [location, setLocation] = useLocation();
   const { profile, signOut } = useAuth();
 
@@ -59,6 +62,14 @@ export function AdminSidebar() {
   return (
     <div className="w-64 bg-card border-r border-border h-[calc(100vh-4rem)] flex flex-col fixed left-0 top-16 z-40">
       <div className="flex-1 py-4 px-3 space-y-4 overflow-y-auto">
+        {onToggle && (
+          <div className="flex justify-end">
+            <Button size="icon" variant="ghost" onClick={onToggle} className="h-8 w-8 p-0">
+              <X className="h-4 w-4" />
+              <span className="sr-only">Ocultar menú</span>
+            </Button>
+          </div>
+        )}
         {navSections
           .map((section) => (
             <div key={section.label}>

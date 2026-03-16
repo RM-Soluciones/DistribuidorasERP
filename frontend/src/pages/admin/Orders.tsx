@@ -1,17 +1,18 @@
 import { useState } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { useOrders, useUpdateOrderStatus, useAssignOrderDelivery, useUsers, OrderStatus } from "@/lib/supabase-hooks";
+import { useOrders, useUpdateOrderStatus, useUpdateOrderItems, useAssignOrderDelivery, useUsers, OrderStatus } from "@/lib/supabase-hooks";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { Eye, Package, Tag, Monitor, Truck } from "lucide-react";
+import { Eye, Package, Tag, Monitor, Truck, Plus, Minus, Trash2 } from "lucide-react";
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "Pendiente", confirmed: "Confirmado", processing: "Procesando",
@@ -33,6 +34,9 @@ export default function AdminOrders() {
   const [assignOrder, setAssignOrder] = useState<any>(null);
   const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null);
   const [assignDate, setAssignDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
+  const [editableItems, setEditableItems] = useState<any[]>([]);
+  const [isSavingEdits, setIsSavingEdits] = useState(false);
 
   const { data: ordersData, isLoading } = useOrders({
     limit: 100,
@@ -41,20 +45,51 @@ export default function AdminOrders() {
   const { data: driversData } = useUsers({ role: "delivery" });
 
   const { mutate: updateStatus } = useUpdateOrderStatus();
+  const { mutate: updateOrderItems } = useUpdateOrderItems();
   const { mutate: assignDelivery } = useAssignOrderDelivery();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const handleStatusChange = (id: number, newStatus: string) => {
+  const isSelectedOrderEditable = selectedOrder?.status === "pending" || selectedOrder?.status === "confirmed";
+
+  const handleApprove = async (id: number) => {
     updateStatus(
-      { id, data: { status: newStatus as OrderStatus } },
+      { id, data: { status: "confirmed" as OrderStatus } },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ["orders"] });
-          toast({ title: "Estado actualizado", description: `Pedido #${id} → ${STATUS_LABELS[newStatus] || newStatus}` });
+          toast({ title: "Pedido aprobado", description: `Pedido #${id} ahora está confirmado.` });
         },
       }
     );
+  };
+
+  const handleCancel = async (id: number) => {
+    updateStatus(
+      { id, data: { status: "cancelled" as OrderStatus } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["orders"] });
+          toast({ title: "Pedido cancelado", description: `Pedido #${id} ha sido cancelado y se reponen los productos.` });
+        },
+      }
+    );
+  };
+
+  const handleSaveEdits = async () => {
+    if (!selectedOrder) return;
+    setIsSavingEdits(true);
+
+    try {
+      await updateOrderItems({ orderId: selectedOrder.id, items: editableItems });
+      toast({ title: "Pedido actualizado", description: "Items del pedido actualizados." });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      setSelectedOrder(null);
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "No se pudieron guardar los cambios.", variant: "destructive" });
+    } finally {
+      setIsSavingEdits(false);
+    }
   };
 
   const handleAssign = async () => {
@@ -73,7 +108,7 @@ export default function AdminOrders() {
         status: "assigned",
       });
 
-      await updateStatus({ id: assignOrder.id, data: { status: "processing" } });
+      await updateStatus({ id: assignOrder.id, data: { status: "processing" as OrderStatus } });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       toast({ title: "Pedido asignado", description: `Pedido #${assignOrder.id} asignado a repartidor.` });
       setAssignOrder(null);
@@ -81,6 +116,38 @@ export default function AdminOrders() {
       setAssignDate(new Date().toISOString().slice(0, 10));
     } catch (err: any) {
       toast({ title: "Error", description: err?.message || "No se pudo asignar el pedido.", variant: "destructive" });
+    }
+  };
+
+  const handleBulkAssign = async () => {
+    if (selectedOrderIds.length === 0) {
+      toast({ title: "Selecciona pedidos", variant: "destructive" });
+      return;
+    }
+    if (!selectedDriverId) {
+      toast({ title: "Selecciona un repartidor", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const assignmentDate = assignDate || new Date().toISOString().slice(0, 10);
+      await Promise.all(
+        selectedOrderIds.map(async (orderId) => {
+          await assignDelivery({
+            orderId,
+            assignedTo: selectedDriverId,
+            deliveryDate: assignmentDate,
+            status: "assigned",
+          });
+          await updateStatus({ id: orderId, data: { status: "processing" as OrderStatus } });
+        })
+      );
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      toast({ title: "Pedidos asignados", description: `${selectedOrderIds.length} pedidos asignados al chofer.` });
+      setSelectedOrderIds([]);
+      setSelectedDriverId(null);
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "No se pudieron asignar los pedidos.", variant: "destructive" });
     }
   };
 
@@ -94,30 +161,74 @@ export default function AdminOrders() {
       </div>
 
       <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-border bg-slate-50/50 flex gap-4">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filtrar por estado" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {Object.entries(STATUS_LABELS).map(([val, label]) => (
-                <SelectItem key={val} value={val}>{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="p-4 border-b border-border bg-slate-50/50 flex flex-col gap-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filtrar por estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {Object.entries(STATUS_LABELS).map(([val, label]) => (
+                  <SelectItem key={val} value={val}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {selectedOrderIds.length > 0 && (
+              <div className="flex flex-col md:flex-row md:items-center gap-2">
+                <span className="text-xs text-muted-foreground">Seleccionados: {selectedOrderIds.length}</span>
+                <Select value={selectedDriverId?.toString() ?? ""} onValueChange={(v) => setSelectedDriverId(v ? parseInt(v) : null)}>
+                  <SelectTrigger className="w-60">
+                    <SelectValue placeholder="Elegir repartidor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(driversData?.users || []).map((driver) => (
+                      <SelectItem key={driver.id} value={driver.id.toString()}>
+                        {driver.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input type="date" value={assignDate} onChange={(e) => setAssignDate(e.target.value)} className="h-9" />
+                <Button size="sm" onClick={handleBulkAssign}>
+                  Asignar seleccionados
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
 
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[40px]">
+                <Checkbox
+                  checked={
+                    (ordersData?.orders || []).filter((o: any) => o.status === "confirmed").length > 0 &&
+                    selectedOrderIds.length ===
+                      (ordersData?.orders || []).filter((o: any) => o.status === "confirmed").length
+                  }
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedOrderIds(
+                        (ordersData?.orders || [])
+                          .filter((o: any) => o.status === "confirmed")
+                          .map((o: any) => o.id)
+                      );
+                    } else {
+                      setSelectedOrderIds([]);
+                    }
+                  }}
+                />
+              </TableHead>
               <TableHead>Pedido</TableHead>
               <TableHead>Fecha</TableHead>
               <TableHead>Cliente</TableHead>
               <TableHead>Artículos</TableHead>
               <TableHead>Total</TableHead>
               <TableHead>Estado</TableHead>
-              <TableHead>Cambiar Estado</TableHead>
+              <TableHead>Acciones</TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -128,6 +239,18 @@ export default function AdminOrders() {
               <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">No hay pedidos</TableCell></TableRow>
             ) : ordersData?.orders.map((order) => (
               <TableRow key={order.id} className="hover:bg-muted/30">
+                <TableCell className="w-[40px]">
+                  <Checkbox
+                    checked={selectedOrderIds.includes(order.id)}
+                    onCheckedChange={(checked) => {
+                      setSelectedOrderIds((prev) => {
+                        if (checked) return [...new Set([...prev, order.id])];
+                        return prev.filter((id) => id !== order.id);
+                      });
+                    }}
+                    disabled={order.status !== "confirmed"}
+                  />
+                </TableCell>
                 <TableCell className="font-semibold">
                   <div className="flex items-center gap-2">
                     #{order.id}
@@ -154,20 +277,56 @@ export default function AdminOrders() {
                     {STATUS_LABELS[order.status] || order.status}
                   </Badge>
                 </TableCell>
-                <TableCell>
-                  <Select defaultValue={order.status} onValueChange={(v) => handleStatusChange(order.id, v)}>
-                    <SelectTrigger className="w-[130px] h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(STATUS_LABELS).map(([val, label]) => (
-                        <SelectItem key={val} value={val} className="text-xs">{label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <TableCell className="flex flex-col gap-2">
+                  {order.status === "pending" && (
+                    <Button size="sm" variant="secondary" onClick={() => handleApprove(order.id)}>
+                      Aprobar
+                    </Button>
+                  )}
+                  {order.status === "confirmed" && (
+                    <>
+                      <Button size="sm" variant="secondary" onClick={() => setSelectedOrder(order)}>
+                        Editar
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => setAssignOrder(order)}>
+                        Asignar
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleCancel(order.id)}>
+                        Cancelar
+                      </Button>
+                    </>
+                  )}
+                  {order.status === "processing" && (
+                    <Button size="sm" variant="outline" onClick={() => setAssignOrder(order)}>
+                      Reasignar
+                    </Button>
+                  )}
+                  {order.status === "shipped" && (
+                    <span className="text-xs text-muted-foreground">En camino</span>
+                  )}
+                  {order.status === "delivered" && (
+                    <span className="text-xs text-muted-foreground">Entregado</span>
+                  )}
+                  {order.status === "cancelled" && (
+                    <span className="text-xs text-muted-foreground">Cancelado</span>
+                  )}
                 </TableCell>
                 <TableCell className="flex gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => setSelectedOrder(order)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setEditableItems(
+                        (order.items || []).map((item: any) => ({
+                          productId: item.productId,
+                          productName: item.productName,
+                          quantity: item.quantity,
+                          unitPrice: item.unitPrice,
+                        }))
+                      );
+                    }}
+                  >
                     <Eye className="h-4 w-4" />
                   </Button>
                   <Button
@@ -239,20 +398,98 @@ export default function AdminOrders() {
                         <th className="text-center px-3 py-2 font-medium">Cant.</th>
                         <th className="text-right px-3 py-2 font-medium">Precio</th>
                         <th className="text-right px-3 py-2 font-medium">Subtotal</th>
+                        {isSelectedOrderEditable && <th className="text-right px-3 py-2 font-medium">Acción</th>}
                       </tr>
                     </thead>
                     <tbody>
-                      {selectedOrder.items.map((item: any) => (
-                        <tr key={item.id} className="border-t border-border">
+                      {(isSelectedOrderEditable ? editableItems : selectedOrder.items).map((item: any) => (
+                        <tr key={item.productId} className="border-t border-border">
                           <td className="px-3 py-2.5 font-medium">{item.productName}</td>
-                          <td className="px-3 py-2.5 text-center">{item.quantity}</td>
+                          <td className="px-3 py-2.5 text-center">
+                            {isSelectedOrderEditable ? (
+                              <div className="inline-flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={() => {
+                                    setEditableItems((prev) =>
+                                      prev.map((i) =>
+                                        i.productId === item.productId
+                                          ? { ...i, quantity: Math.max(1, i.quantity - 1) }
+                                          : i
+                                      )
+                                    );
+                                  }}
+                                >
+                                  <Minus className="h-3 w-3" />
+                                </Button>
+                                <span className="w-6 text-center">{item.quantity}</span>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={() => {
+                                    setEditableItems((prev) =>
+                                      prev.map((i) =>
+                                        i.productId === item.productId
+                                          ? { ...i, quantity: i.quantity + 1 }
+                                          : i
+                                      )
+                                    );
+                                  }}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              item.quantity
+                            )}
+                          </td>
                           <td className="px-3 py-2.5 text-right text-muted-foreground">${item.unitPrice.toFixed(2)}</td>
-                          <td className="px-3 py-2.5 text-right font-semibold">${item.subtotal.toFixed(2)}</td>
+                          <td className="px-3 py-2.5 text-right font-semibold">${(item.unitPrice * item.quantity).toFixed(2)}</td>
+                          {isSelectedOrderEditable && (
+                            <td className="px-3 py-2.5 text-right">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive"
+                                onClick={() => {
+                                  setEditableItems((prev) => prev.filter((i) => i.productId !== item.productId));
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+
+                {isSelectedOrderEditable && (
+                  <div className="mt-3 flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setEditableItems(
+                          (selectedOrder.items || []).map((item: any) => ({
+                            productId: item.productId,
+                            productName: item.productName,
+                            quantity: item.quantity,
+                            unitPrice: item.unitPrice,
+                          }))
+                        );
+                      }}
+                    >
+                      Restaurar
+                    </Button>
+                    <Button onClick={handleSaveEdits} disabled={isSavingEdits}>
+                      {isSavingEdits ? "Guardando..." : "Guardar cambios"}
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Totals */}
@@ -276,20 +513,30 @@ export default function AdminOrders() {
               </div>
 
               {/* Status */}
-              <div className="flex items-center justify-between pt-1">
+              <div className="flex items-center justify-between pt-3">
                 <Badge className={`${STATUS_COLORS[selectedOrder.status]} text-xs border shadow-none px-3 py-1`}>
                   {STATUS_LABELS[selectedOrder.status] || selectedOrder.status}
                 </Badge>
-                <Select defaultValue={selectedOrder.status} onValueChange={(v) => { handleStatusChange(selectedOrder.id, v); setSelectedOrder({ ...selectedOrder, status: v }); }}>
-                  <SelectTrigger className="w-[150px] h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(STATUS_LABELS).map(([val, label]) => (
-                      <SelectItem key={val} value={val} className="text-xs">{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                  {selectedOrder.status === "pending" && (
+                    <Button size="sm" onClick={() => handleApprove(selectedOrder.id)}>
+                      Aprobar
+                    </Button>
+                  )}
+                  {selectedOrder.status === "confirmed" && (
+                    <Button size="sm" variant="secondary" onClick={() => setAssignOrder(selectedOrder)}>
+                      Asignar
+                    </Button>
+                  )}
+                  {selectedOrder.status !== "delivered" && selectedOrder.status !== "cancelled" && (
+                    <Button size="sm" variant="destructive" onClick={() => handleCancel(selectedOrder.id)}>
+                      Cancelar
+                    </Button>
+                  )}
+                  <Button size="sm" variant="outline" onClick={() => window.open(`/admin/invoice/${selectedOrder.id}`, "_blank") }>
+                    Factura
+                  </Button>
+                </div>
               </div>
             </div>
           )}

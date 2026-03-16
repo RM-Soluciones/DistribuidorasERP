@@ -3,6 +3,7 @@ import { ShoppingCart, LogOut, Package, LayoutDashboard, ChevronDown, Monitor } 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/hooks/use-cart";
+import { useBusinessInfo } from "@/lib/use-business-info";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +17,7 @@ export function Navbar() {
   const [, setLocation] = useLocation();
   const { profile: user, loading: isLoading, signOut } = useAuth();
   const cartCount = useCart((state) => state.getCartCount());
+  const { info } = useBusinessInfo();
 
   const handleLogout = async () => {
     await signOut();
@@ -27,11 +29,15 @@ export function Navbar() {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-display font-bold text-xl group-hover:scale-105 transition-transform shadow-lg shadow-primary/25">
-              D
-            </div>
+            {info?.logo ? (
+              <img src={info.logo} alt="Logo" className="h-8 w-8 rounded-lg object-contain bg-white" />
+            ) : (
+              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-display font-bold text-xl group-hover:scale-105 transition-transform shadow-lg shadow-primary/25">
+                D
+              </div>
+            )}
             <span className="font-display font-bold text-xl tracking-tight hidden sm:block">
-              DistriPro
+              {info?.name ? info.name : "DistriPro"}
             </span>
           </Link>
           

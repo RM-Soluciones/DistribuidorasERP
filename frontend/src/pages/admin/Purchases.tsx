@@ -27,7 +27,7 @@ export default function AdminPurchases() {
   const { data: purchases, isLoading, refetch } = usePurchases({});
   const { data: suppliers } = useSuppliers();
   const { data: productsData } = useProducts({ limit: 200 });
-  const { data: paymentMethods } = usePaymentMethods();
+  const { data: paymentMethods } = usePaymentMethods({ for: "purchase", onlyActive: true });
   const { mutateAsync: createPurchase, isPending: isCreating } = useCreatePurchase();
   const { mutateAsync: addPayment, isPending: isPaymentPending } = useAddSupplierPayment();
   const { toast } = useToast();

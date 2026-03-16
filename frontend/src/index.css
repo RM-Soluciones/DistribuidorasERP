@@ -133,3 +133,26 @@
 .glass-panel {
   @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-xl;
 }
+
+/* Print helpers */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .printable,
+  .printable * {
+    visibility: visible !important;
+  }
+
+  .printable {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}

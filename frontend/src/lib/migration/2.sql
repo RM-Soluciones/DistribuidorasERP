@@ -183,13 +183,19 @@ id SERIAL PRIMARY KEY,
 name TEXT,
 type payment_method_type DEFAULT 'cash',
 is_active BOOLEAN DEFAULT TRUE,
-created_at TIMESTAMP DEFAULT NOW()
+  is_pos BOOLEAN DEFAULT TRUE,
+  is_purchase BOOLEAN DEFAULT TRUE,
+  is_delivery BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS supplier_payments (
-id SERIAL PRIMARY KEY,
-purchase_id INTEGER REFERENCES purchases(id),
-supplier_id INTEGER REFERENCES suppliers(id),
+-- Backwards compatible: add new flags if table existed before this migration
+ALTER TABLE payment_methods
+  ADD COLUMN IF NOT EXISTS is_pos BOOLEAN DEFAULT TRUE;
+ALTER TABLE payment_methods
+  ADD COLUMN IF NOT EXISTS is_purchase BOOLEAN DEFAULT TRUE;
+ALTER TABLE payment_methods
+  ADD COLUMN IF NOT EXISTS is_delivery BOOLEAN DEFAULT TRUE;
 amount NUMERIC(12,2),
 payment_method_id INTEGER REFERENCES payment_methods(id),
 notes TEXT,

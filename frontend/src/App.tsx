@@ -21,9 +21,12 @@ import AdminOrders from "./pages/admin/Orders";
 import AdminCategories from "./pages/admin/Categories";
 import AdminUsers from "./pages/admin/Users";
 import AdminClients from "./pages/admin/Clients";
+import AdminSettings from "./pages/admin/Settings";
 import AdminDiscounts from "./pages/admin/Discounts";
 import AdminOffers from "./pages/admin/Offers";
 import AdminPOS from "./pages/admin/POS";
+import AdminInvoice from "./pages/admin/Invoice";
+import AdminCashRegister from "./pages/admin/CashRegister";
 import AdminSuppliers from "./pages/admin/Suppliers";
 import SupplierDetail from "./pages/admin/SupplierDetail";
 import AdminPurchases from "./pages/admin/Purchases";
@@ -52,8 +55,10 @@ function Router() {
       <Route path="/delivery" component={DeliveryDashboard} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/admin/pos" component={AdminPOS} />
+      <Route path="/admin/invoice/:id" component={AdminInvoice} />
       <Route path="/admin/products" component={AdminProducts} />
       <Route path="/admin/orders" component={AdminOrders} />
+      <Route path="/admin/cash-register" component={AdminCashRegister} />
       <Route path="/admin/categories" component={AdminCategories} />
       <Route path="/admin/discounts" component={AdminDiscounts} />
       <Route path="/admin/offers" component={AdminOffers} />
@@ -62,6 +67,7 @@ function Router() {
       <Route path="/admin/purchases" component={AdminPurchases} />
       <Route path="/admin/payment-methods" component={AdminPaymentMethods} />
       <Route path="/admin/clients" component={AdminClients} />
+      <Route path="/admin/settings" component={AdminSettings} />
       <Route path="/admin/users" component={AdminUsers} />
       <Route component={NotFound} />
     </Switch>

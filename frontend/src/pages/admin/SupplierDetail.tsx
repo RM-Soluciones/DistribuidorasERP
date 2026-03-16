@@ -23,7 +23,7 @@ export default function SupplierDetail() {
   const [, params] = useRoute("/admin/suppliers/:id");
   const id = parseInt(params?.id || "0");
   const { data: supplier, isLoading, refetch } = useSupplier(id) as any;
-  const { data: paymentMethods } = usePaymentMethods();
+  const { data: paymentMethods } = usePaymentMethods({ for: "purchase", onlyActive: true });
   const { mutateAsync: addPayment, isPending } = useAddSupplierPayment();
   const { toast } = useToast();
 

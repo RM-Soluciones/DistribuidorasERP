@@ -47,7 +47,7 @@ export default function DeliveryDashboard() {
   const [isCancelling, setIsCancelling] = useState(false);
 
   const { data: payments, isLoading: isLoadingPayments } = useOrderPayments(selectedDelivery?.order?.id);
-  const { data: paymentMethods } = usePaymentMethods();
+  const { data: paymentMethods } = usePaymentMethods({ for: "delivery", onlyActive: true });
   const { mutate: createPayment } = useCreateOrderPayment();
   const queryClient = useQueryClient();
   const { toast } = useToast();

@@ -1,9 +1,9 @@
+import { useState, useEffect } from "react";
 import { Navbar } from "./Navbar";
 import { AdminSidebar } from "./AdminSidebar";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
-import { useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Menu } from "lucide-react";
 
 const ADMIN_ALLOWED_ROLES = ["admin", "seller"] as const;
 type AdminAllowedRole = (typeof ADMIN_ALLOWED_ROLES)[number];
@@ -11,6 +11,18 @@ type AdminAllowedRole = (typeof ADMIN_ALLOWED_ROLES)[number];
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { profile, loading } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const stored = window.localStorage.getItem("admin_sidebar_open");
+    return stored === "false" ? false : true;
+  });
+
+  const toggleSidebar = () => setSidebarOpen((prev) => !prev);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("admin_sidebar_open", sidebarOpen ? "true" : "false");
+  }, [sidebarOpen]);
 
   const getModuleForPath = (path: string) => {
     if (path === "/admin" || path === "/admin/") return "dashboard";
@@ -80,11 +92,23 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="flex">
-        <AdminSidebar />
-        <main className="flex-1 ml-64 min-h-[calc(100vh-4rem)] bg-slate-50/50 p-8">
-          <div className="max-w-6xl mx-auto">
-            {children}
-          </div>
+        {sidebarOpen && <AdminSidebar onToggle={toggleSidebar} />}
+        <main
+          className={
+            "flex-1 min-h-[calc(100vh-4rem)] bg-slate-50/50 p-8 " +
+            (sidebarOpen ? "ml-64" : "ml-0")
+          }
+        >
+          {!sidebarOpen && (
+            <button
+              onClick={toggleSidebar}
+              className="fixed top-24 left-4 z-50 rounded-lg border border-border bg-white/90 p-2 shadow-sm hover:bg-white"
+              aria-label="Mostrar menú"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          )}
+          <div className="max-w-6xl mx-auto">{children}</div>
         </main>
       </div>
     </div>
